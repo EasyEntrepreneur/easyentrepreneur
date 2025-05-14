@@ -10,6 +10,7 @@ import savePaymentMethodRoute from './routes/savePaymentMethod'
 import payRoute from './routes/stripe/pay'
 import authRoutes from './routes/auth' // 🆕 auth centralisée
 import userRoutes from './routes/users';
+import billingRoutes from './routes/billing';
 
 dotenv.config()
 
@@ -34,6 +35,7 @@ app.use('/api/stripe/pay', payRoute)
 app.use('/api/stripe/get-payment-methods', getPaymentMethodsRoute)
 app.use('/api/stripe/get-customer-id', getCustomerIdRoute)
 app.use('/api/stripe/save-payment-method', savePaymentMethodRoute)
+app.use('/api/billing', billingRoutes);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)

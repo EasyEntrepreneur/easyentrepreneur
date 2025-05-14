@@ -31,13 +31,13 @@ export default function StepBilling({ onSuccess, onEdit, userId }: StepBillingPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/billing', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/billing`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          userId, // ✅ ici
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(formData),
       });
 
       const data = await res.json();
@@ -54,7 +54,7 @@ export default function StepBilling({ onSuccess, onEdit, userId }: StepBillingPr
       console.error(err);
     }
   };
-
+  
   if (isSubmitted) {
     return (
       <div className={styles.billingRecap}>

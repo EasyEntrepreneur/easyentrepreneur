@@ -1,23 +1,19 @@
-// /app/api/billing/route.ts
+import { Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { prisma } from '@/lib/prisma';
-
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
-
-  const body = await req.json();
-  console.log('Body reçu:', body);
-
+export const saveBillingInfo = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Utilisateur non authentifié' });
+    }
+
+    const body = req.body;
+    console.log('📦 Infos facturation reçues:', body);
+
     const existingBilling = await prisma.billingInfo.findFirst({
-      where: { userId: session.user.id },
+      where: { userId },
     });
 
     let billing;
@@ -34,13 +30,13 @@ export async function POST(req: Request) {
           city: body.city,
           zip: body.zip,
           company: body.company || '',
-          vat: body.vat || ''
+          vat: body.vat || '',
         },
       });
     } else {
       billing = await prisma.billingInfo.create({
         data: {
-          userId: session.user.id,
+          userId,
           name: body.name,
           lastname: body.lastname,
           email: body.email,
@@ -49,14 +45,14 @@ export async function POST(req: Request) {
           city: body.city,
           zip: body.zip,
           company: body.company || '',
-          vat: body.vat || ''
+          vat: body.vat || '',
         },
       });
     }
 
-    return NextResponse.json({ success: true, billing });
+    return res.json({ success: true, billing });
   } catch (error: any) {
-    console.error('Erreur enregistrement billing:', error.message, error);
-    return NextResponse.json({ error: error.message || 'Erreur serveur' }, { status: 500 });
+    console.error('❌ Erreur enregistrement billing:', error.message);
+    return res.status(500).json({ error: error.message || 'Erreur serveur' });
   }
-}
+};

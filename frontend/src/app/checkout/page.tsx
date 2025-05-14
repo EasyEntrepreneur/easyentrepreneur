@@ -1,13 +1,19 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './CheckoutPage.module.css';
 
 import StepBilling from '@/components/StepBilling';
 import StepPayment from '@/components/StepPayment';
 import CheckoutSummary from '@/components/CheckoutSummary';
+
+type User = {
+  id: string;
+  email: string;
+  role: string;
+  name?: string;
+};
 
 const offres = [
   {
@@ -56,15 +62,40 @@ const offres = [
 ];
 
 export default function CheckoutPage() {
-  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const planId = searchParams.get('plan') || 'basic';
   const selectedPlan = offres.find((o) => o.id === planId);
 
+  const [user, setUser] = useState<User | null>(null);
   const [billingValidated, setBillingValidated] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (status === 'loading') {
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/auth/login';
+      return;
+    }
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setUser(data.user);
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
     return <div className={styles.loading}>Chargement…</div>;
   }
 
@@ -81,8 +112,8 @@ export default function CheckoutPage() {
             {/* Étape 1 : Connexion */}
             <div className={styles.stepBox}>
               <h3>1. Connecté en tant que :</h3>
-              {session?.user?.email ? (
-                <p className={styles.authInfo}>{session.user.email}</p>
+              {user?.email ? (
+                <p className={styles.authInfo}>{user.email}</p>
               ) : (
                 <div className={styles.authForms}></div>
               )}
@@ -101,21 +132,23 @@ export default function CheckoutPage() {
             {/* Étape 3 : Facturation */}
             <div className={styles.stepBox}>
               <h3>3. Informations de facturation</h3>
-              <StepBilling
-                userId={session!.user.id} // ✅ Ajout ici
-                onSuccess={() => setBillingValidated(true)}
-                onEdit={() => setBillingValidated(false)}
-              />
+              {user && (
+                <StepBilling
+                  userId={user.id}
+                  onSuccess={() => setBillingValidated(true)}
+                  onEdit={() => setBillingValidated(false)}
+                />
+              )}
             </div>
 
             {/* Étape 4 : Paiement */}
             <div className={styles.stepBox}>
               <h3>4. Méthode de paiement</h3>
-              {billingValidated && selectedPlan && session?.user?.id && (
+              {billingValidated && selectedPlan && user && (
                 <StepPayment
                   montant={selectedPlan.prixAnnuel}
                   plan={selectedPlan.id}
-                  userId={session.user.id}
+                  userId={user.id}
                   onPaymentMethodSelected={setSelectedCardId}
                 />
               )}
@@ -123,7 +156,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Résumé Sticky à droite */}
-          {selectedPlan && session?.user?.id && (
+          {selectedPlan && user && (
             <aside className={styles.sidebar}>
               <CheckoutSummary
                 nom={selectedPlan.nom}
@@ -131,7 +164,7 @@ export default function CheckoutPage() {
                 prixAnnuel={selectedPlan.prixAnnuel}
                 economie={selectedPlan.economie}
                 avantages={selectedPlan.avantages}
-                userId={session.user.id}
+                userId={user.id}
                 selectedCardId={selectedCardId}
                 plan={selectedPlan.id as 'basic' | 'standard' | 'premium'}
               />
