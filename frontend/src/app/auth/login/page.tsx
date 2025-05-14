@@ -10,9 +10,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
@@ -26,13 +29,16 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        // ✅ Stockage éventuel d’un token ici plus tard
-        window.location.href = '/dashboard'; // Rediriger vers ton tableau de bord
+        localStorage.setItem('token', data.token); // ✅ Stocker le JWT
+        window.location.href = '/dashboard'; // ✅ Redirection
       } else {
         setError(data.message || 'Email ou mot de passe invalide.');
       }
     } catch (err) {
-      setError("Erreur serveur. Veuillez réessayer.");
+      console.error('Erreur serveur :', err);
+      setError('Erreur serveur. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,7 +80,11 @@ export default function LoginPage() {
             </label>
 
             {error && <p className={styles.error}>{error}</p>}
-            <button type="submit" className={styles.submit}>Se connecter</button>
+
+            <button type="submit" className={styles.submit} disabled={loading}>
+              {loading ? 'Connexion...' : 'Se connecter'}
+            </button>
+
             <p className={styles.footerText}>
               Pas encore de compte ? <a href="/auth/register">Créer un compte</a>
             </p>

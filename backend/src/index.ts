@@ -9,7 +9,7 @@ import getCustomerIdRoute from './routes/getCustomerId'
 import savePaymentMethodRoute from './routes/savePaymentMethod'
 import payRoute from './routes/stripe/pay'
 import authRoutes from './routes/auth' // 🆕 auth centralisée
-import userRoutes from './routes/users' // 🆕 futur espace user (infos, etc.)
+import userRoutes from './routes/users';
 
 dotenv.config()
 
