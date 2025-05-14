@@ -1,32 +1,50 @@
-// ✅ app/dashboard/page.tsx
-import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/route";
-import { redirect } from "next/navigation";
-import styles from "../admin/admin.module.css";
-import { prisma } from "@/lib/prisma";
-import FeatureGrid from "./components/FeatureGrid";
-import UserSidebar from "./components/UserSidebar"; // si fichier minuscule
-import UserKpiCards from "./components/UserKpiCards";
-import { PlanProvider } from "./context/PlanContext";
+'use client';
 
-export default async function UserDashboard() {
-  const session = await getServerSession(authOptions);
+import { useEffect, useState } from 'react';
+import styles from '../admin/admin.module.css';
+import FeatureGrid from './components/FeatureGrid';
+import UserSidebar from './components/UserSidebar';
+import UserKpiCards from './components/UserKpiCards';
+import { PlanProvider } from './context/PlanContext';
 
-  if (!session || !session.user) {
-    redirect("/");
-  }
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  currentPlan: string;
+  documents: any[];
+};
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: {
-      documents: true,
-    },
-  });
+export default function UserDashboard() {
+  const [user, setUser] = useState<User | null>(null);
 
-  if (!user) redirect("/");
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/auth/login';
+      return;
+    }
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Unauthorized');
+        const data = await res.json();
+        setUser(data.user);
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      });
+  }, []);
+
+  if (!user) return <p>Chargement...</p>;
 
   const fakeRevenue = 1200;
-  const remainingAI = user.currentPlan === "FREEMIUM" ? 5 : Infinity;
+  const remainingAI = user.currentPlan === 'FREEMIUM' ? 5 : Infinity;
   const documentsGenerated = user.documents.length;
 
   return (
@@ -34,8 +52,10 @@ export default async function UserDashboard() {
       <UserSidebar />
 
       <main className={styles.content}>
-        <h1 className={styles.title}>Bonjour, {user.name} !</h1>
-        <p className={styles.subtitle}>Plan actuel : <strong>{user.currentPlan}</strong></p>
+        <h1 className={styles.title}>Bonjour, {user.name || user.email} !</h1>
+        <p className={styles.subtitle}>
+          Plan actuel : <strong>{user.currentPlan}</strong>
+        </p>
 
         <PlanProvider plan={user.currentPlan}>
           <UserKpiCards

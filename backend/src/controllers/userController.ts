@@ -9,16 +9,25 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response) =
       return res.status(401).json({ message: 'Utilisateur non authentifié' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        documents: true,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur introuvable' });
     }
 
     res.json({
-      id: user.id,
-      email: user.email,
-      name: user.name ?? '',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name ?? '',
+        currentPlan: user.currentPlan,
+        documents: user.documents,
+      },
     });
   } catch (err) {
     console.error(err);
