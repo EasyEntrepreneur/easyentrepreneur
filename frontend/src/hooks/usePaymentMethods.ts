@@ -16,7 +16,7 @@ export function usePaymentMethods(userId: string | null) {
     if (!userId) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/get-payment-methods?userId=${userId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get-payment-methods?userId=${userId}`);
       const contentType = res.headers.get('content-type');
 
       if (!contentType || !contentType.includes('application/json')) {
