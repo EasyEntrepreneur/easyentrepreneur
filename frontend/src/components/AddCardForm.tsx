@@ -1,4 +1,3 @@
-// ✅ AddCardForm.tsx corrigé : URL dynamique + fallback
 'use client';
 
 import {
@@ -25,7 +24,7 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +32,11 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
     setSuccess(null);
 
     if (!stripe || !elements) return;
+
+    if (!clientSecret) {
+      setError("Impossible de vérifier la carte : clientSecret manquant.");
+      return;
+    }
 
     const card = elements.getElement(CardNumberElement);
     const exp = elements.getElement(CardExpiryElement);
@@ -48,14 +52,12 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
     const { error: stripeError, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
       payment_method: {
         card,
-        billing_details: {
-          name,
-        },
+        billing_details: { name },
       },
     });
 
     if (stripeError) {
-      setError(stripeError.message ?? 'Une erreur est survenue lors de l’enregistrement de la carte.');
+      setError(stripeError.message ?? 'Erreur lors de l’enregistrement de la carte.');
       setLoading(false);
       return;
     }
@@ -72,18 +74,17 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
         });
 
         const data = await res.json();
-        console.log('📦 Réponse backend :', data);
 
         if (!res.ok || !data.success) {
-          setError("La carte a été enregistrée chez Stripe, mais pas côté base de données.");
+          setError("Carte enregistrée chez Stripe, mais échec côté base de données.");
           setLoading(false);
           return;
         }
 
-        setSuccess("✅ La carte a été vérifiée avec succès.");
+        setSuccess("✅ Carte ajoutée avec succès.");
         if (onCardSaved) onCardSaved(paymentMethodId);
       } catch (err) {
-        console.error('Erreur lors de l’enregistrement en base :', err);
+        console.error('Erreur backend :', err);
         setError("Erreur serveur lors de l’enregistrement de la carte.");
       }
     } else {
@@ -101,7 +102,7 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
-        placeholder="ex Jean Dupont"
+        placeholder="ex : Jean Dupont"
       />
 
       <label className={styles.formLabel}>Numéro de carte</label>

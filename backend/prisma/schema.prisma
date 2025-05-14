@@ -22,6 +22,7 @@ model User {
   billings          BillingInfo[]
   stripeCustomerId  String?
   paymentMethods    PaymentMethod[]
+  subscriptionId    String?
   currentPlan       Plan            @default(FREEMIUM)
   usages            Usage[]         // Relation vers les usages
   companyInfo       CompanyInfo?    // Relation vers l'entreprise

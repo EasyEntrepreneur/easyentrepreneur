@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { useSearchParams } from 'next/navigation';
 import styles from './StepPayment.module.css';
 import AddCardForm from './AddCardForm';
 import { usePaymentMethods } from '../hooks/usePaymentMethods';
@@ -14,51 +15,45 @@ type Props = {
   montant: number;
   plan: string;
   userId: string;
-  onPaymentMethodSelected: (id: string) => void;
+  onSubscriptionSuccess: () => void;
+  onPaymentMethodSelected: (paymentMethodId: string) => void;
+  onCustomerIdRetrieved: (customerId: string) => void;
 };
 
-const getBrandLabel = (brand?: string | null): string => {
-  if (!brand) return 'Carte';
-
-  switch (brand.toLowerCase()) {
-    case 'visa':
-      return 'Visa';
-    case 'mastercard':
-      return 'Mastercard';
-    case 'amex':
-      return 'American Express';
-    case 'discover':
-      return 'Discover';
-    case 'jcb':
-      return 'JCB';
-    case 'diners':
-      return 'Diners Club';
-    case 'unionpay':
-      return 'UnionPay';
-    default:
-      return 'Carte';
-  }
-};
-
-export default function StepPayment({ montant, plan, userId, onPaymentMethodSelected }: Props) {
+export default function StepPayment({
+  montant,
+  plan,
+  userId,
+  onSubscriptionSuccess,
+  onPaymentMethodSelected,
+  onCustomerIdRetrieved,
+}: Props) {
+  const searchParams = useSearchParams();
+  const priceId = searchParams.get('priceId') ?? '';
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<string>('new');
   const { methods: paymentMethods, loading, refetch } = usePaymentMethods(userId);
+  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
 
+  // Récupération du client Stripe
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      const userRes = await fetch(`${API_URL}/get-customer-id?userId=${userId}`);
+      const userData = await userRes.json();
+      const customerId = userData?.stripeCustomerId;
+      setStripeCustomerId(customerId);
+      onCustomerIdRetrieved(customerId);
+    };
+
+    fetchCustomer();
+  }, [userId]);
+
+  // Création du SetupIntent pour ajouter une carte
   useEffect(() => {
     const createSetupIntent = async () => {
+      if (!stripeCustomerId) return;
+
       try {
-        if (!userId || !API_URL) return;
-
-        const userRes = await fetch(`${API_URL}/get-customer-id?userId=${userId}`);
-        const userData = await userRes.json();
-        const stripeCustomerId = userData?.stripeCustomerId;
-
-        if (!stripeCustomerId) {
-          console.error('Aucun stripeCustomerId trouvé pour cet utilisateur');
-          return;
-        }
-
         const res = await fetch(`${API_URL}/stripe/setup-intent`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -67,30 +62,26 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
 
         const data = await res.json();
         setClientSecret(data.clientSecret);
+        console.log('✅ SetupIntent clientSecret :', data.clientSecret);
       } catch (err) {
-        console.error('Erreur setupIntent :', err);
+        console.error('Erreur lors de la création du SetupIntent', err);
       }
     };
 
     createSetupIntent();
-  }, [userId]);
-
-  useEffect(() => {
-    if (!loading) {
-      if (paymentMethods.length > 0) {
-        setSelectedMethod(paymentMethods[0].id);
-        onPaymentMethodSelected(paymentMethods[0].id);
-      } else {
-        setSelectedMethod('new');
-      }
-    }
-  }, [paymentMethods, loading, onPaymentMethodSelected]);
+  }, [stripeCustomerId, userId]);
 
   useEffect(() => {
     if (selectedMethod !== 'new') {
       onPaymentMethodSelected(selectedMethod);
     }
   }, [selectedMethod, onPaymentMethodSelected]);
+
+  const handleCardSaved = async (newPaymentMethodId: string) => {
+    await refetch();
+    setSelectedMethod(newPaymentMethodId);
+    onPaymentMethodSelected(newPaymentMethodId);
+  };
 
   return (
     <div className={styles.stepBox}>
@@ -107,7 +98,7 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
               />
               <div className={styles.savedCard}>
                 <span>
-                  {getBrandLabel(pm.brand)} •••• {pm.last4} — {pm.exp_month}/{pm.exp_year}
+                  {pm.brand} •••• {pm.last4} — {pm.exp_month}/{pm.exp_year}
                 </span>
               </div>
             </label>
@@ -128,7 +119,11 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
 
       {selectedMethod === 'new' && clientSecret && (
         <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <AddCardForm clientSecret={clientSecret} userId={userId} onCardSaved={refetch} />
+          <AddCardForm
+            clientSecret={clientSecret}
+            userId={userId}
+            onCardSaved={handleCardSaved}
+          />
         </Elements>
       )}
     </div>

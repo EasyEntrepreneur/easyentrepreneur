@@ -27,8 +27,8 @@ const offres = [
     avantages: [
       '5 documents / mois',
       'Support par email',
-      'Accès au tableau de bord'
-    ]
+      'Accès au tableau de bord',
+    ],
   },
   {
     id: 'standard',
@@ -42,23 +42,23 @@ const offres = [
     avantages: [
       'Documents illimités',
       'Support prioritaire',
-      'Historique complet'
-    ]
+      'Historique complet',
+    ],
   },
   {
     id: 'premium',
     nom: 'Premium',
     prixMensuel: 19.99,
-    prixAnnuel: 199.90,
+    prixAnnuel: 199.9,
     prixAffiche: '19.99 € / mois',
     economie: 'Économisez 39,98 €',
     description: 'Pour aller plus loin',
     avantages: [
       'Assistant IA dédié',
       'API + Accès développeur',
-      'Support 7j/7'
-    ]
-  }
+      'Support 7j/7',
+    ],
+  },
 ];
 
 export default function CheckoutPage() {
@@ -69,6 +69,7 @@ export default function CheckoutPage() {
   const [user, setUser] = useState<User | null>(null);
   const [billingValidated, setBillingValidated] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,10 +95,6 @@ export default function CheckoutPage() {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  if (loading) {
-    return <div className={styles.loading}>Chargement…</div>;
-  }
 
   return (
     <div className={styles.pageContainer}>
@@ -150,13 +147,15 @@ export default function CheckoutPage() {
                   plan={selectedPlan.id}
                   userId={user.id}
                   onPaymentMethodSelected={setSelectedCardId}
+                  onSubscriptionSuccess={() => window.location.href = '/merci'}
+                  onCustomerIdRetrieved={setStripeCustomerId} // ✅ nouveau
                 />
               )}
             </div>
           </div>
 
           {/* Résumé Sticky à droite */}
-          {selectedPlan && user && (
+          {selectedPlan && stripeCustomerId && (
             <aside className={styles.sidebar}>
               <CheckoutSummary
                 nom={selectedPlan.nom}
@@ -164,7 +163,7 @@ export default function CheckoutPage() {
                 prixAnnuel={selectedPlan.prixAnnuel}
                 economie={selectedPlan.economie}
                 avantages={selectedPlan.avantages}
-                userId={user.id}
+                userId={stripeCustomerId} // ✅ le bon ID Stripe
                 selectedCardId={selectedCardId}
                 plan={selectedPlan.id as 'basic' | 'standard' | 'premium'}
               />

@@ -1,7 +1,7 @@
 'use client';
 
 import styles from './PourquoiSection.module.css';
-import PaiementButton from '@/components/PaiementButton';
+import { useRouter } from 'next/navigation';
 
 const offres = [
   {
@@ -12,6 +12,7 @@ const offres = [
     prixAffiche: '4.99 € / mois',
     economie: 'Économisez 9,98 €',
     description: 'Pour bien démarrer',
+    priceId: 'price_1ROhlzGxzBu5ejULKZIByW1f',
     avantages: [
       '5 documents / mois',
       'Support par email',
@@ -27,6 +28,7 @@ const offres = [
     economie: 'Économisez 19,98 €',
     description: 'La solution complète',
     populaire: true,
+    priceId: 'price_1ROhjyGxzBu5ejULSWzAUYlF',
     avantages: [
       'Documents illimités',
       'Support prioritaire',
@@ -41,6 +43,7 @@ const offres = [
     prixAffiche: '19.99 € / mois',
     economie: 'Économisez 39,98 €',
     description: 'Pour aller plus loin',
+    priceId: 'price_1ROhmSGxzBu5ejULeOnma7aZ',
     avantages: [
       'Assistant IA dédié',
       'API + Accès développeur',
@@ -50,6 +53,12 @@ const offres = [
 ];
 
 export default function PourquoiSection() {
+  const router = useRouter();
+
+  const handleChoosePlan = (plan: string, priceId: string) => {
+    router.push(`/checkout?plan=${plan}&priceId=${priceId}`);
+  };
+
   return (
     <section className={styles.pricingSection}>
       <h2 className={styles.title}>Nos Offres</h2>
@@ -76,7 +85,12 @@ export default function PourquoiSection() {
                 <li key={i}>{a}</li>
               ))}
             </ul>
-            <PaiementButton montant={offre.prixMensuel} plan={offre.id} />
+            <button
+              className={styles.selectButton}
+              onClick={() => handleChoosePlan(offre.id, offre.priceId)}
+            >
+              Choisir cette offre
+            </button>
           </div>
         ))}
       </div>
