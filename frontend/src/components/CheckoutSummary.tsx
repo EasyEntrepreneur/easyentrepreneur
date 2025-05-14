@@ -11,8 +11,10 @@ type Props = {
   avantages: string[];
   userId: string;
   selectedCardId: string | null;
-  plan: 'basic' | 'standard' | 'premium'; // ✅ nécessaire pour l'envoi backend
+  plan: 'basic' | 'standard' | 'premium';
 };
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CheckoutSummary({
   nom,
@@ -22,7 +24,7 @@ export default function CheckoutSummary({
   avantages,
   userId,
   selectedCardId,
-  plan, // ✅ il manquait cette ligne ici
+  plan,
 }: Props) {
   const subtotal = prixAnnuel;
   const vat = subtotal * 0.2;
@@ -42,23 +44,23 @@ export default function CheckoutSummary({
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/stripe/pay', {
+      const res = await fetch(`${API_URL}/stripe/confirm-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           paymentMethodId: selectedCardId,
-          amount: Math.round(total * 100),
-          plan, // ✅ maintenant il est bien dans le scope
+          amount: total,
+          plan,
         }),
       });
 
       const data = await res.json();
 
-      if (data.success) {
-        window.location.href = '/merci'; // ✅ Redirection vers la page de confirmation
+      if (res.ok && data.success) {
+        window.location.href = '/merci';
       } else {
-        setError(`❌ Paiement échoué : ${data.error || 'erreur inconnue'}`);
+        setError(`❌ Paiement échoué : ${data?.error || 'erreur inconnue'}`);
       }
     } catch (err) {
       console.error('Erreur lors du paiement :', err);

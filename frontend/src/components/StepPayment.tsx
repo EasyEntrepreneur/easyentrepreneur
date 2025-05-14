@@ -17,7 +17,7 @@ type Props = {
   onPaymentMethodSelected: (id: string) => void;
 };
 
-const getBrandLabel = (brand: string | undefined | null): string => {
+const getBrandLabel = (brand?: string | null): string => {
   if (!brand) return 'Carte';
 
   switch (brand.toLowerCase()) {

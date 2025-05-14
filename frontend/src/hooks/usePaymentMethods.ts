@@ -27,15 +27,23 @@ export function usePaymentMethods(userId: string | null) {
       }
 
       const data = await res.json();
+      console.log('✅ Données cartes reçues du backend :', data);
 
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         console.error('❌ Erreur côté API:', data);
         setMethods([]);
         return;
       }
 
       if (Array.isArray(data.paymentMethods)) {
-        setMethods(data.paymentMethods);
+        const formatted = data.paymentMethods.map((pm: any) => ({
+          id: pm.id,
+          brand: pm.card?.brand ?? 'inconnue',
+          last4: pm.card?.last4 ?? '0000',
+          exp_month: pm.card?.exp_month ?? 0,
+          exp_year: pm.card?.exp_year ?? 0,
+        }));
+        setMethods(formatted);
       } else {
         console.error('❌ Réponse attendue : tableau de méthodes. Reçu :', data);
         setMethods([]);

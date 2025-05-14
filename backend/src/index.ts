@@ -15,6 +15,7 @@ import paymentRoutes from './routes/payment';
 import getCustomerId from './routes/getCustomerId';
 import savePaymentMethod from './routes/savePaymentMethod';
 import registerRoute from './routes/auth/register';
+import confirmPaymentRoute from './routes/stripe/confirm-payment';
 
 dotenv.config()
 
@@ -44,6 +45,8 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/get-customer-id', getCustomerId);
 app.use('/api/save-payment-method', savePaymentMethod);
 app.use('/api/auth/register', registerRoute);
+
+app.use('/api/stripe/confirm-payment', confirmPaymentRoute);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)
