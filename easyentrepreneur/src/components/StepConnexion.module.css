@@ -1,0 +1,37 @@
+.stepBox {
+  background: #f9f9fc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.stepNumber {
+  background-color: #6366f1;
+  color: white;
+  font-weight: 600;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+}
+
+.stepTitle {
+  font-size: 1rem;
+  color: #1f2937;
+  margin: 0;
+}
+
+.userEmail {
+  font-weight: 500;
+  color: #374151;
+}

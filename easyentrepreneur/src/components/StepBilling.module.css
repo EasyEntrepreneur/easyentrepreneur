@@ -1,0 +1,113 @@
+.stepBox {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.stepNumber {
+  background: #8b5cf6;
+  color: white;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.75rem;
+  margin-right: 0.75rem;
+}
+
+.stepTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.inputGroup label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.inputGroup input,
+.inputGroup select {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background-color: #f9fafb;
+  transition: border 0.2s, background 0.2s;
+}
+
+.inputGroup input:focus,
+.inputGroup select:focus {
+  border-color: #8b5cf6;
+  outline: none;
+  background-color: white;
+}
+
+.submitButton {
+  margin-top: 2rem;
+  background: linear-gradient(to right, #f97316, #ef4444);
+  color: white;
+  font-weight: 600;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.submitButton:hover {
+  background: linear-gradient(to right, #ea580c, #dc2626);
+}
+
+
+.billingRecap {
+  background: #f9f9f9;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.recapHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.editButton {
+  background: none;
+  border: none;
+  color: #0066cc;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.editButton:hover {
+  text-decoration: underline;
+}

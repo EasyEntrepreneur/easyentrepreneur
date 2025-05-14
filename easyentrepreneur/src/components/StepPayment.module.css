@@ -1,0 +1,97 @@
+.stepBox {
+  background: #f9f9fc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stepNumber {
+  background-color: #6366f1;
+  color: white;
+  font-weight: 600;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+}
+
+.stepTitle {
+  font-size: 1rem;
+  color: #1f2937;
+  margin: 0;
+}
+
+.paymentOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.radioOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #374151;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.radioOption input[type="radio"] {
+  margin-top: 0.2rem;
+}
+
+.savedCard {
+  margin-left: 1.5rem;
+  margin-top: 0.25rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  background: #f3f4f6;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.savedMethods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.savedMethod {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ctaButton {
+  background: linear-gradient(135deg, #FF6B00 0%, #FFB347 100%);
+  color: white;
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer; /* 🔥 Ajoute cette ligne */
+}
+
+.ctaButton:hover {
+  background: linear-gradient(to right, #ea580c, #f97316);
+}

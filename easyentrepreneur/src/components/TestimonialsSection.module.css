@@ -1,0 +1,72 @@
+.wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0d2159;
+  margin-bottom: 0.5rem;
+}
+
+.title span {
+  font-weight: 800;
+  color: #0d2159;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #1e3a8a;
+  margin-bottom: 3rem;
+}
+
+/* Swiper root override to fix spacing */
+.swiper {
+  padding-bottom: 32px;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 20px;
+  padding: 32px 24px;
+  max-width: 320px;
+  margin: 24px auto;
+  margin-bottom: 64px;
+  box-shadow: 0 8px 30px rgba(31, 38, 135, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  height: 100%;
+}
+
+.quoteIcon {
+  font-size: 42px;
+  color: #1e4dd850;
+  margin-bottom: 16px;
+}
+
+.comment {
+  font-size: 1rem;
+  color: #0d2159;
+  font-style: italic;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  padding: 0 16px;
+}
+
+.meta {
+  font-size: 0.9rem;
+  color: #1e3a8a;
+  padding-left: 8px;
+
+}
+
+.meta span {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+}

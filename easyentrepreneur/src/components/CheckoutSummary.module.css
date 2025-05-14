@@ -1,0 +1,112 @@
+.summaryBox {
+  background: #f9f9fc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 2rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1f2937;
+}
+
+.planInfo {
+  margin-bottom: 1.25rem;
+}
+
+.planInfo strong {
+  font-size: 1.1rem;
+}
+
+.planInfo ul {
+  margin-top: 0.5rem;
+  padding-left: 1rem;
+}
+
+.discount {
+  color: #16a34a;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.priceBreakdown {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.lineTotal {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+
+.payNowButton {
+  width: 100%;
+  background: linear-gradient(to right, #f97316, #ea580c);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  margin-bottom: 1rem;
+  cursor: pointer;
+}
+
+.legal {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+.legalSmall {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.payNowButton {
+  background: linear-gradient(135deg, #FF6B00 0%, #FFB347 100%);
+  color: white;
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer; /* 🔥 Ajoute cette ligne */
+}
+
+.payNowButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(239, 108, 0, 0.4);
+}
+
+.disabled {
+  background: #94a3b8 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.error {
+  color: #dc2626;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
