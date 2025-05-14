@@ -1,36 +1,66 @@
-// ✅ app/dashboard/parametres/SettingsForm.tsx
-"use client";
+'use client';
 
-import { useSession } from "next-auth/react";
-import { useState } from "react";
-import styles from "./SettingsForm.module.css";
+import { useEffect, useState } from 'react';
+import styles from './SettingsForm.module.css';
 
 export default function SettingsForm() {
-  const { data: session } = useSession();
-  const user = session?.user;
-
+  const [user, setUser] = useState<any>(null);
   const [form, setForm] = useState({
-    name: user?.name || "",
-    lastname: user?.lastname || "",
-    email: user?.email || "",
-    password: "",
-    billingName: "",
-    billingLastname: "",
-    billingEmail: "",
-    billingCountry: "",
-    billingAddress: "",
-    billingZip: "",
-    billingCity: "",
-    billingCompany: "",
-    billingVat: "",
-    companyName: "",
-    companyAddress: "",
-    companyZip: "",
-    companyCity: "",
-    companySiret: "",
-    companyVat: "",
-    companyPhone: "",
+    name: '',
+    lastname: '',
+    email: '',
+    password: '',
+    billingName: '',
+    billingLastname: '',
+    billingEmail: '',
+    billingCountry: '',
+    billingAddress: '',
+    billingZip: '',
+    billingCity: '',
+    billingCompany: '',
+    billingVat: '',
+    companyName: '',
+    companyAddress: '',
+    companyZip: '',
+    companyCity: '',
+    companySiret: '',
+    companyVat: '',
+    companyPhone: '',
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/auth/login';
+      return;
+    }
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setUser(data.user);
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        window.location.href = '/auth/login';
+      });
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        name: user.name || '',
+        lastname: user.lastname || '',
+        email: user.email || '',
+      }));
+    }
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -38,7 +68,64 @@ export default function SettingsForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Données envoyées :", form);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    console.log('submit');
+    console.log('Données envoyées :', form);
+
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-user`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          name: form.name,
+          lastname: form.lastname,
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-billing`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          billingName: form.billingName,
+          billingLastname: form.billingLastname,
+          billingEmail: form.billingEmail,
+          billingCountry: form.billingCountry,
+          billingAddress: form.billingAddress,
+          billingZip: form.billingZip,
+          billingCity: form.billingCity,
+          billingCompany: form.billingCompany,
+          billingVat: form.billingVat,
+        }),
+      });
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-company`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          companyName: form.companyName,
+          companyAddress: form.companyAddress,
+          companyZip: form.companyZip,
+          companyCity: form.companyCity,
+          companySiret: form.companySiret,
+          companyVat: form.companyVat,
+          companyPhone: form.companyPhone,
+        }),
+      });
+
+      alert('Modifications enregistrées ✅');
+    } catch (err) {
+      console.error('Erreur mise à jour :', err);
+      alert("Erreur lors de l'enregistrement.");
+    }
   };
 
   return (

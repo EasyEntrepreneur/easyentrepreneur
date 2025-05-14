@@ -1,36 +1,30 @@
-import { Response } from 'express';
-import prisma from '../lib/prisma'; // ✅ Correct : import default
+import { Request, Response } from 'express';
+import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 
-export const getUserProfile = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: 'Utilisateur non authentifié' });
-    }
+export const getUserInfo = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = (req as AuthenticatedRequest).user?.userId;
 
+  try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        documents: true,
+      select: {
+        id: true,
+        name: true,
+        lastname: true,
+        email: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur introuvable' });
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name ?? '',
-        currentPlan: user.currentPlan,
-        documents: user.documents,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    return res.json({ user });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 };

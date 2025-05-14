@@ -17,8 +17,14 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    if (!process.env.NEXT_PUBLIC_API_URL) {
+      console.error("❌ L'URL de l’API n’est pas définie !");
+      setError("Problème de configuration.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log('API URL dans le navigateur =', process.env.NEXT_PUBLIC_API_URL);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -28,20 +34,28 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log("✅ Réponse API login :", data);
 
-      if (res.ok) {
-        localStorage.setItem('token', data.token); // ✅ Stocker le JWT
-        window.location.href = '/dashboard'; // ✅ Redirection
-      } else {
+      if (!res.ok) {
         setError(data.message || 'Email ou mot de passe invalide.');
+        alert(data.message || 'Email ou mot de passe invalide.');
+        return;
+      }
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        window.location.href = '/dashboard';
+      } else {
+        setError("Réponse inattendue du serveur.");
       }
     } catch (err) {
-      console.error('Erreur serveur :', err);
+      console.error('❌ Erreur serveur :', err);
       setError('Erreur serveur. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <>

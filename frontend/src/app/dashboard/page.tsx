@@ -45,7 +45,7 @@ export default function UserDashboard() {
 
   const fakeRevenue = 1200;
   const remainingAI = user.currentPlan === 'FREEMIUM' ? 5 : Infinity;
-  const documentsGenerated = user.documents.length;
+  const documentsGenerated = user.documents?.length || 0;
 
   return (
     <div className={styles.dashboard}>
