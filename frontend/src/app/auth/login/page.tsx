@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import HeaderAuth from '@/components/HeaderAuth';
 import styles from './page.module.css';
@@ -15,16 +14,25 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (res?.ok) {
-      window.location.href = '/';
-    } else {
-      setError("Email ou mot de passe invalide.");
+      const data = await res.json();
+
+      if (res.ok) {
+        // ✅ Stockage éventuel d’un token ici plus tard
+        window.location.href = '/dashboard'; // Rediriger vers ton tableau de bord
+      } else {
+        setError(data.message || 'Email ou mot de passe invalide.');
+      }
+    } catch (err) {
+      setError("Erreur serveur. Veuillez réessayer.");
     }
   };
 

@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@prisma/client": "^6.7.0",
-    "git": "^0.1.5"
+    "@prisma/client": "^6.7.0"
   }
 }

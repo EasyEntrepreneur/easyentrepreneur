@@ -1,34 +1,40 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import documentRoutes from './routes/documents';
-import paymentIntentRoute from './routes/paymentIntent'; // ✅ Ajout de la route stripe
-import stripeRoutes from './routes/stripe';
-import getPaymentMethodsRoute from './routes/getPaymentMethods';
-import getCustomerIdRoute from './routes/getCustomerId';
-import savePaymentMethodRoute from './routes/savePaymentMethod';
-import payRoute from './routes/stripe/pay';
+import express from 'express'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import documentRoutes from './routes/documents'
+import paymentIntentRoute from './routes/paymentIntent'
+import stripeRoutes from './routes/stripe'
+import getPaymentMethodsRoute from './routes/getPaymentMethods'
+import getCustomerIdRoute from './routes/getCustomerId'
+import savePaymentMethodRoute from './routes/savePaymentMethod'
+import payRoute from './routes/stripe/pay'
+import authRoutes from './routes/auth' // 🆕 auth centralisée
+import userRoutes from './routes/users' // 🆕 futur espace user (infos, etc.)
 
+dotenv.config()
 
-dotenv.config(); // Chargement dotenv en premier
-console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY); // vérification clé
-console.log("STRIPE_SECRET_KEY:", process.env.STRIPE_SECRET_KEY); // vérification clé stripe
+const app = express()
+const port = process.env.PORT || 4000
 
-const app = express();
-const port = process.env.PORT || 5000;
+// Debug des clés
+console.log('🔑 OPENAI_API_KEY:', process.env.OPENAI_API_KEY)
+console.log('💳 STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY)
 
-app.use(cors());
-app.use(express.json());
+app.use(cors())
+app.use(express.json())
 
-// Routes
-app.use('/api/documents', documentRoutes);
-app.use('/api/payment-intent', paymentIntentRoute); // ✅ Nouvelle route Stripe
-app.use('/api/stripe', stripeRoutes); // ✅ pas .use('/api/stripe', async ...)
-app.use('/api/get-payment-methods', getPaymentMethodsRoute); // ✅ OK
-app.use('/api/get-customer-id', getCustomerIdRoute); // ✅ sans parenthèses
-app.use('/api/save-payment-method', savePaymentMethodRoute);
-app.use('/api/stripe/pay', payRoute);
+// ✅ Toutes les routes passent sous /api
+app.use('/api/auth', authRoutes)
+app.use('/api/users', userRoutes) // Pour infos profil, maj données, etc.
+app.use('/api/documents', documentRoutes)
+
+app.use('/api/stripe', stripeRoutes)
+app.use('/api/stripe/payment-intent', paymentIntentRoute)
+app.use('/api/stripe/pay', payRoute)
+app.use('/api/stripe/get-payment-methods', getPaymentMethodsRoute)
+app.use('/api/stripe/get-customer-id', getCustomerIdRoute)
+app.use('/api/stripe/save-payment-method', savePaymentMethodRoute)
 
 app.listen(port, () => {
-  console.log(`🚀 Server running on http://localhost:${port}`);
-});
+  console.log(`🚀 API backend running at: http://localhost:${port}/api`)
+})
