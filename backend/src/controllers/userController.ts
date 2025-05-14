@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { prisma } from '../lib/prisma';
+import prisma from '../lib/prisma'; // ✅ Correct : import default
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 
 export const getUserProfile = async (req: AuthenticatedRequest, res: Response) => {

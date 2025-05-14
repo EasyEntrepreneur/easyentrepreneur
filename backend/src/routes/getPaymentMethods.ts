@@ -31,10 +31,10 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
           const stripeMethod = await stripe.paymentMethods.retrieve(method.stripePaymentMethodId);
           return {
             id: method.stripePaymentMethodId,
-            brand: stripeMethod.card?.brand,
-            last4: stripeMethod.card?.last4,
-            exp_month: stripeMethod.card?.exp_month,
-            exp_year: stripeMethod.card?.exp_year,
+            brand: stripeMethod.card?.brand ?? 'inconnue',
+            last4: stripeMethod.card?.last4 ?? '0000',
+            exp_month: stripeMethod.card?.exp_month ?? 0,
+            exp_year: stripeMethod.card?.exp_year ?? 0,
           };
         } catch (error) {
           console.error('Erreur Stripe:', error);
@@ -47,7 +47,11 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       (m): m is NonNullable<typeof m> => m !== null
     );
 
-    res.json(filtered);
+    // ✅ Corrigé : retour structuré
+    res.json({
+      success: true,
+      paymentMethods: filtered,
+    });
   } catch (error) {
     console.error('Erreur getPaymentMethods:', error);
     res.status(500).json({ error: 'Erreur serveur' });

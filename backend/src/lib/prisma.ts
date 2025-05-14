@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client'
+// backend/src/lib/prisma.ts
+import { PrismaClient } from '@prisma/client';
 
-
-export const prisma = new PrismaClient()
+const prisma = new PrismaClient();
+export default prisma;

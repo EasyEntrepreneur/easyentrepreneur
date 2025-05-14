@@ -11,6 +11,10 @@ import payRoute from './routes/stripe/pay'
 import authRoutes from './routes/auth' // 🆕 auth centralisée
 import userRoutes from './routes/users';
 import billingRoutes from './routes/billing';
+import paymentRoutes from './routes/payment';
+import getCustomerId from './routes/getCustomerId';
+import savePaymentMethod from './routes/savePaymentMethod';
+import registerRoute from './routes/auth/register';
 
 dotenv.config()
 
@@ -28,6 +32,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes) // Pour infos profil, maj données, etc.
 app.use('/api/documents', documentRoutes)
+app.use('/api', paymentRoutes);
 
 app.use('/api/stripe', stripeRoutes)
 app.use('/api/stripe/payment-intent', paymentIntentRoute)
@@ -36,6 +41,9 @@ app.use('/api/stripe/get-payment-methods', getPaymentMethodsRoute)
 app.use('/api/stripe/get-customer-id', getCustomerIdRoute)
 app.use('/api/stripe/save-payment-method', savePaymentMethodRoute)
 app.use('/api/billing', billingRoutes);
+app.use('/api/get-customer-id', getCustomerId);
+app.use('/api/save-payment-method', savePaymentMethod);
+app.use('/api/auth/register', registerRoute);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)

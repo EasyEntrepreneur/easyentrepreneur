@@ -15,27 +15,33 @@ export function usePaymentMethods(userId: string | null) {
   const fetchMethods = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get-payment-methods?userId=${userId}`);
       const contentType = res.headers.get('content-type');
 
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('Réponse non JSON reçue (probablement une 404 ou 500)');
+        console.error('❌ Réponse non JSON reçue (probablement une 404 ou 500)');
         setMethods([]);
         return;
       }
 
       const data = await res.json();
 
-      if (!Array.isArray(data)) {
-        console.error('Réponse attendue : tableau de méthodes. Reçu :', data);
+      if (!res.ok) {
+        console.error('❌ Erreur côté API:', data);
         setMethods([]);
         return;
       }
 
-      setMethods(data);
+      if (Array.isArray(data.paymentMethods)) {
+        setMethods(data.paymentMethods);
+      } else {
+        console.error('❌ Réponse attendue : tableau de méthodes. Reçu :', data);
+        setMethods([]);
+      }
     } catch (err) {
-      console.error('Erreur lors de la récupération des cartes :', err);
+      console.error('❌ Erreur lors de la récupération des cartes :', err);
       setMethods([]);
     } finally {
       setLoading(false);

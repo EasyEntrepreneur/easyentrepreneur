@@ -1,3 +1,4 @@
+// ✅ AddCardForm.tsx corrigé : URL dynamique + fallback
 'use client';
 
 import {
@@ -23,6 +24,8 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +64,8 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
       const paymentMethodId = setupIntent.payment_method as string;
       console.log('✅ Carte enregistrée :', paymentMethodId);
 
-      // 🔥 ENREGISTRE EN BASE DE DONNÉES
       try {
-        const res = await fetch('http://localhost:5000/api/save-payment-method', {
+        const res = await fetch(`${API_URL}/save-payment-method`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, paymentMethodId }),
@@ -99,7 +101,7 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
-        placeholder="Thomas Bonaldi"
+        placeholder="ex Jean Dupont"
       />
 
       <label className={styles.formLabel}>Numéro de carte</label>

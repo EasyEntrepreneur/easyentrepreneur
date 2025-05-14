@@ -8,6 +8,7 @@ import AddCardForm from './AddCardForm';
 import { usePaymentMethods } from '../hooks/usePaymentMethods';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 type Props = {
   montant: number;
@@ -16,18 +17,40 @@ type Props = {
   onPaymentMethodSelected: (id: string) => void;
 };
 
+const getBrandLabel = (brand: string | undefined | null): string => {
+  if (!brand) return 'Carte';
+
+  switch (brand.toLowerCase()) {
+    case 'visa':
+      return 'Visa';
+    case 'mastercard':
+      return 'Mastercard';
+    case 'amex':
+      return 'American Express';
+    case 'discover':
+      return 'Discover';
+    case 'jcb':
+      return 'JCB';
+    case 'diners':
+      return 'Diners Club';
+    case 'unionpay':
+      return 'UnionPay';
+    default:
+      return 'Carte';
+  }
+};
+
 export default function StepPayment({ montant, plan, userId, onPaymentMethodSelected }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<string>('new');
   const { methods: paymentMethods, loading, refetch } = usePaymentMethods(userId);
 
-  // Crée un SetupIntent pour ajouter une carte
   useEffect(() => {
     const createSetupIntent = async () => {
       try {
-        if (!userId) return;
+        if (!userId || !API_URL) return;
 
-        const userRes = await fetch(`http://localhost:5000/api/get-customer-id?userId=${userId}`);
+        const userRes = await fetch(`${API_URL}/get-customer-id?userId=${userId}`);
         const userData = await userRes.json();
         const stripeCustomerId = userData?.stripeCustomerId;
 
@@ -36,13 +59,10 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
           return;
         }
 
-        const res = await fetch('http://localhost:5000/api/stripe/setup-intent', {
+        const res = await fetch(`${API_URL}/stripe/setup-intent`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerId: stripeCustomerId,
-            userId,
-          }),
+          body: JSON.stringify({ customerId: stripeCustomerId, userId }),
         });
 
         const data = await res.json();
@@ -55,7 +75,6 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
     createSetupIntent();
   }, [userId]);
 
-  // Définit automatiquement la première carte enregistrée
   useEffect(() => {
     if (!loading) {
       if (paymentMethods.length > 0) {
@@ -67,7 +86,6 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
     }
   }, [paymentMethods, loading, onPaymentMethodSelected]);
 
-  // Met à jour la carte sélectionnée
   useEffect(() => {
     if (selectedMethod !== 'new') {
       onPaymentMethodSelected(selectedMethod);
@@ -89,7 +107,7 @@ export default function StepPayment({ montant, plan, userId, onPaymentMethodSele
               />
               <div className={styles.savedCard}>
                 <span>
-                  {pm.brand?.toUpperCase()} •••• {pm.last4} — {pm.exp_month}/{pm.exp_year}
+                  {getBrandLabel(pm.brand)} •••• {pm.last4} — {pm.exp_month}/{pm.exp_year}
                 </span>
               </div>
             </label>

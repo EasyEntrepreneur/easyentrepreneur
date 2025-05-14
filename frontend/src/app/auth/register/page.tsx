@@ -5,30 +5,37 @@ import HeaderAuth from '@/components/HeaderAuth';
 import styles from './page.module.css';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(''); // ✅ nouveau
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(''); // reset erreur
+    setErrorMessage('');
 
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ firstName, lastName, email, password }),
-      headers: { 'Content-Type': 'application/json' }
-    });
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        body: JSON.stringify({ name: firstName, lastname: lastName, email, password }),
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      window.location.href = '/auth/login';
-    } else {
-      setErrorMessage(data?.error || "Erreur lors de l'inscription");
+      if (res.ok) {
+        window.location.href = '/auth/login';
+      } else {
+        setErrorMessage(data?.error || "Erreur lors de l'inscription");
+      }
+    } catch (err) {
+      console.error('Erreur réseau :', err);
+      setErrorMessage("Erreur de connexion au serveur. Veuillez réessayer.");
     }
   };
 
@@ -93,7 +100,6 @@ export default function RegisterPage() {
               </div>
             </label>
 
-            {/* ✅ Message d'erreur visible */}
             {errorMessage && (
               <p style={{ color: 'red', fontSize: '0.875rem', marginTop: '8px' }}>
                 {errorMessage}
