@@ -49,7 +49,6 @@ export default function UserDashboard() {
 
   return (
     <div className={styles.dashboard}>
-      <UserSidebar />
 
       <main className={styles.content}>
         <h1 className={styles.title}>Bonjour, {user.name || user.email} !</h1>

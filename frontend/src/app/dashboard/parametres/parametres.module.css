@@ -1,0 +1,116 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  padding: 0 1rem;
+  overflow-y: auto; /* scroll seulement si nécessaire */
+}
+
+
+.card {
+  padding: 2rem;
+  width: 100%;
+  max-width: 1600px;
+  margin-top: 0; /* s’assurer qu’il n’y a pas de décalage */
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(255, 255, 255);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+}
+
+
+.tabHeader {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 0.5rem;
+}
+
+.tabHeader button {
+  background: none;
+  border: none;
+  padding: 1rem 0;
+  font-size: 1rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: border-color 0.3s ease, color 0.3s ease;
+  color: #555;
+}
+
+.tabHeader button:hover {
+  color: #000;
+  border-color: #bbb;
+}
+
+.tabHeader .active {
+  font-weight: 600;
+  border-color: #0070f3;
+  color: #000;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section input {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
+.saveBtn {
+  margin-top: 2rem;
+  background: linear-gradient(135deg, #FF6B00 0%, #FFB347 100%);
+  color: white;
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.saveBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(239, 108, 0, 0.4);
+}
+
+.inlineGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.inlineGroup input {
+  flex: 1;
+}
+
+.successMsg {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.errorMsg {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  font-weight: 500;
+}

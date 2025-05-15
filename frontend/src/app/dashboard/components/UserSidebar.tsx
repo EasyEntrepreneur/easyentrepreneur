@@ -10,7 +10,7 @@ const links = [
   { label: "Contrats", href: "/dashboard/contrats" },
   { label: "Assistant IA", href: "/dashboard/ia" },
   { label: "Support", href: "/dashboard/support" },
-  { label: "Paramètres", href: "/dashboard/parametres" },
+  { label: "Paramètres de compte", href: "/dashboard/parametres" },
 ];
 
 export default function UserSidebar() {
