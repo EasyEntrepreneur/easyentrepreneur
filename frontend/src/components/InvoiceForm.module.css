@@ -1,0 +1,266 @@
+.form {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+  font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+/* HEADER grid */
+.header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* TITRE aligné à droite */
+.title {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: right;
+}
+.titleInput {
+  font-size: 1.5rem;
+  font-weight: bold;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: right;
+}
+
+/* INPUTS */
+.inputAuto {
+  font-size: 0.9rem;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  background: transparent;
+  padding: 0.2rem;
+  width: 100%;
+}
+.inputAuto:focus {
+  outline: none;
+  border-bottom-color: #000;
+}
+.flexLine {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* EMETTEUR */
+.issuer {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+/* CLIENT */
+.client {
+  grid-column: 2;
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+/* ROW with remove on right */
+.fieldRowRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+/* ROW with remove on left */
+.fieldRowLeft {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+/* Boutons − et − dans le tableau */
+.removeBtn {
+  background: #007BFF;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Bouton + sous sections */
+.addSectionBtn {
+  background: #007BFF;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 1.2rem;
+  line-height: 1;
+  align-self: flex-start;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* 1) Bouton + sous la section client aligné à droite */
+.client .addSectionBtn {
+  align-self: flex-end;
+}
+
+/* DATE TABLE (50%) */
+.dateTable {
+  width: 50%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+.dateTable td {
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+.dateLabel {
+  background: #efefef;
+  padding: 0.75rem;
+  font-weight: 600;
+}
+.dateInput input {
+  width: 100%;
+  padding: 0.6rem;
+  border: none;
+}
+
+/* LIGNES */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+.table th {
+  background: #efefef;
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+}
+.table td {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+.table input {
+  width: 100%;
+  border: none !important;
+  outline: none;
+  padding: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.table input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* + centré */
+.addBtnContainer {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.addLine {
+  background: #007BFF;
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  line-height: 32px;
+  cursor: pointer;
+}
+
+/* FOOTER & totaux */
+.footerRow {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+  align-items: flex-start;
+}
+
+.payment {
+  flex: 1;
+  min-height: 80px;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-size: 0.85rem;
+  resize: none;
+}
+.summary {
+  width: 240px;
+  font-size: 0.9rem;
+}
+.summary > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #eee;
+}
+.totalTTC {
+  font-weight: bold;
+  border-top: 2px solid #ddd;
+  padding-top: 0.6rem;
+}
+
+/* NOTE légale */
+.legal {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  width: 100%;
+  text-align: center;      /* texte centré */
+  margin: 2rem auto 0;     /* espace au-dessus + centré */
+  display: block;
+  resize: none;
+}
+
+/* BOUTON ENREGISTRER */
+.submit {
+  display: block;
+  margin: 2rem 0 0 auto;
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #FF6B00, #FFB347);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255,107,0,0.2);
+}
+
+
+/* Champs éditables : fond gris-bleu, plus d’underline */
+.form :global(input:not([type=button])),
+.form :global(textarea) {
+  background: #eef4ff;
+  border: 1px solid #d0d7e8;
+  border-radius: 4px;
+  outline: none;
+}
+
+/* Focus toujours visible en bleu */
+.form :global(input:focus),
+.form :global(textarea:focus) {
+  border-color: #007BFF;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}

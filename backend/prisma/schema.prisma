@@ -8,24 +8,25 @@ datasource db {
 }
 
 model User {
-  id                String          @id @default(cuid())
-  name              String?
-  lastname          String?
-  email             String          @unique
-  emailVerified     DateTime?
-  emailVerifiedToken String?        @unique
-  password          String
-  role              Role            @default(USER)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  documents         Document[]
-  billings          BillingInfo[]
-  stripeCustomerId  String?
-  paymentMethods    PaymentMethod[]
-  subscriptionId    String?
-  currentPlan       Plan            @default(FREEMIUM)
-  usages            Usage[]         // Relation vers les usages
-  companyInfo       CompanyInfo?    // Relation vers l'entreprise
+  id                 String          @id @default(cuid())
+  name               String?
+  lastname           String?
+  email              String          @unique
+  emailVerified      DateTime?
+  emailVerifiedToken String?         @unique
+  password           String
+  role               Role            @default(USER)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  documents          Document[]
+  billings           BillingInfo[]
+  stripeCustomerId   String?
+  paymentMethods     PaymentMethod[]
+  subscriptionId     String?
+  currentPlan        Plan            @default(FREEMIUM)
+  usages             Usage[] // Relation vers les usages
+  companyInfo        CompanyInfo? // Relation vers l'entreprise
+  invoices           Invoice[] // 🔁 Relation inverse des factures
 }
 
 enum Role {
@@ -79,32 +80,84 @@ enum UsageType {
 }
 
 model Usage {
-  id        String     @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User       @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   type      UsageType
-  count     Int        @default(0)
+  count     Int       @default(0)
   resetDate DateTime
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, type])
 }
 
 model CompanyInfo {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  name      String
-  address   String
-  zip       String
-  city      String
-  siret     String?
-  vat       String?
-  phone     String?
+  id      String  @id @default(cuid())
+  userId  String  @unique
+  name    String
+  address String
+  zip     String
+  city    String
+  siret   String?
+  vat     String?
+  phone   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Invoice {
+  id            String  @id @default(cuid())
+  number        String  @unique // ex: 2024-001
+  user          User    @relation(fields: [userId], references: [id])
+  userId        String
+  clientName    String
+  clientAddress String
+  clientZip     String
+  clientCity    String
+  clientCountry String
+  clientEmail   String?
+  clientPhone   String?
+
+  status   InvoiceStatus @default(PENDING)
+  issuedAt DateTime      @default(now())
+  dueAt    DateTime?
+  paidAt   DateTime?
+
+  items    InvoiceItem[] // lignes (produits/services)
+  totalHT  Float
+  totalTVA Float
+  totalTTC Float
+
+  iban String?
+  bic  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId String
+
+  description String
+  quantity    Int
+  unitPrice   Float
+  vatRate     Float // ex: 20.0 pour 20 %
+
+  totalHT  Float
+  totalTVA Float
+  totalTTC Float
+}
+
+enum InvoiceStatus {
+  PAID
+  PENDING
+  FAILED
+  CANCELED
 }

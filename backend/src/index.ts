@@ -19,6 +19,7 @@ import confirmPaymentRoute from './routes/stripe/confirm-payment';
 import createSubscription from './routes/createSubscription';
 import confirmEmailRoute from './routes/confirmEmail';
 import updateUserInfoRoutes from './routes/updateUserInfo';
+import invoicesRoute from './routes/invoices'
 
 
 dotenv.config()
@@ -56,6 +57,8 @@ app.use('/api', createSubscription);
 app.use('/api', confirmEmailRoute);
 
 app.use('/api', updateUserInfoRoutes);
+
+app.use('/invoices', invoicesRoute)
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)
