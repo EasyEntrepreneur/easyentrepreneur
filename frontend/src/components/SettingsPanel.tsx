@@ -1,4 +1,3 @@
-// frontend/src/components/SettingsPanel.tsx
 import { FC } from "react";
 import styles from "./SettingsPanel.module.css";
 
@@ -13,15 +12,18 @@ export type Settings = {
 interface Props {
   settings: Settings;
   onChange: (newSettings: Settings) => void;
+  onLoadIssuer: () => void;
 }
 
-export const SettingsPanel: FC<Props> = ({ settings, onChange }) => {
-  // Déclarez toggle ici
+export const SettingsPanel: FC<Props> = ({
+  settings,
+  onChange,
+  onLoadIssuer,
+}) => {
   const toggle = (key: keyof Settings) => {
     onChange({ ...settings, [key]: !settings[key] });
   };
 
-  // Puis renvoyez votre JSX
   return (
     <aside className={styles.settingsPanel}>
       <h2>Réglages</h2>
@@ -56,7 +58,10 @@ export const SettingsPanel: FC<Props> = ({ settings, onChange }) => {
         </button>
       </div>
 
-      {/* etc. */}
+      <div className={styles.field}>
+        <label>Émetteur auto</label>
+        <button onClick={onLoadIssuer}>Charger</button>
+      </div>
     </aside>
-  );
+);
 };
