@@ -1,21 +1,31 @@
 // backend/src/routes/issuer.ts
-import { Router } from "express";
-import prisma from "../lib/prisma";  // l'unique fichier prisma.ts que tu as conservé
+import { Router, Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import prisma from "../lib/prisma";
 
 const router = Router();
 
 // GET /api/issuer
-router.get("/api/issuer", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
-    // Adapte la condition WHERE en fonction de la manière dont tu identifies l'utilisateur
-    // ici j'imagine que tu as déjà un middleware qui met `req.user.id`
-    const userId = (req as any).user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Utilisateur non authentifié" });
+    // 1. Vérifier la présence d'un header Authorization
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Token manquant" });
+    }
+    const token = auth.split(" ")[1];
+
+    // 2. Vérifier et décoder le token
+    let payload: any;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (err) {
+      return res.status(401).json({ error: "Token invalide" });
     }
 
+    // 3. Récupérer les infos de l’émetteur pour l’utilisateur donné
     const issuer = await prisma.companyInfo.findUnique({
-      where: { userId },
+      where: { userId: payload.userId },
       select: {
         name: true,
         address: true,
@@ -28,12 +38,14 @@ router.get("/api/issuer", async (req, res) => {
     });
 
     if (!issuer) {
-      return res.status(404).json({ error: "Infos émetteur non trouvées" });
+      return res.status(404).json({ error: "Émetteur non trouvé" });
     }
-    res.json(issuer);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+
+    // 4. Tout est OK, on renvoie les données
+    return res.json(issuer);
+  } catch (err) {
+    console.error("API /issuer error:", err);
+    return res.status(500).json({ error: "Erreur serveur" });
   }
 });
 

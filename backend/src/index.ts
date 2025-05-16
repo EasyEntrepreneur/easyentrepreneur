@@ -32,7 +32,12 @@ const port = process.env.PORT || 4000
 console.log('🔑 OPENAI_API_KEY:', process.env.OPENAI_API_KEY)
 console.log('💳 STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY)
 
-app.use(cors())
+app.use(
+  cors({
+    origin: "http://localhost:3000",  // ou process.env.FRONTEND_URL
+    credentials: true,                // <— autorise les cookies et le header Authorization
+  })
+);
 app.use(express.json())
 
 // ✅ Toutes les routes passent sous /api
@@ -59,8 +64,8 @@ app.use('/api', confirmEmailRoute);
 
 app.use('/api', updateUserInfoRoutes);
 
-app.use('/invoices', invoicesRoute)
-app.use("/issuer", issuerRouter);
+app.use('/api/invoices', invoicesRoute)
+app.use("/api/issuer", issuerRouter);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)

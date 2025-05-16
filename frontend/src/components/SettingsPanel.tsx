@@ -60,7 +60,12 @@ export const SettingsPanel: FC<Props> = ({
 
       <div className={styles.field}>
         <label>Émetteur auto</label>
-        <button onClick={onLoadIssuer}>Charger</button>
+        <button
+          onClick={() => {
+            console.log("⚙️ bouton Charger cliqué");
+            onLoadIssuer();
+          }}
+        >Charger</button>
       </div>
     </aside>
 );

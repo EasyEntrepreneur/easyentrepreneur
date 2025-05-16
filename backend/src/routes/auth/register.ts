@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import prisma from '../../config/prisma';
+import prisma from '../../lib/prisma';
 import Stripe from 'stripe';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';

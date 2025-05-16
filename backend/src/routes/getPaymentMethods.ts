@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
-import prisma from '../config/prisma';
+import prisma from '../lib/prisma';
 
 dotenv.config();
 
