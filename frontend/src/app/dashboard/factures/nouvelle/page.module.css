@@ -1,0 +1,10 @@
+.dashboardLayout {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start; /* <-- aligne tous les enfants sur le haut */
+}
+
+/* Supprime la margin-top du formulaire pour qu'il remonte */
+.invoiceWrapper :global(.form) {
+  margin-top: 0 !important;
+}

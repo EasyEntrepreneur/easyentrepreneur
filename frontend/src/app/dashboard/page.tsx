@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import styles from '../admin/admin.module.css';
 import FeatureGrid from './components/FeatureGrid';
-import UserSidebar from './components/UserSidebar';
 import UserKpiCards from './components/UserKpiCards';
 import { PlanProvider } from './context/PlanContext';
 
