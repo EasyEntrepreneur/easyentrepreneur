@@ -1,77 +1,82 @@
-// frontend/src/app/dashboard/factures/nouvelle/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SettingsPanel, Settings } from "@/components/SettingsPanel";
 import InvoiceForm, { Issuer } from "@/components/InvoiceForm";
 import styles from "./page.module.css";
 
 export default function NewInvoicePage() {
-  // 1) État des réglages
   const [settings, setSettings] = useState<Settings>({
     enableVAT: false,
     vatPerLine: false,
+    vatRate: 20,
     showQuantity: true,
     showUnit: false,
   });
 
-  // 2) État pour les données de l’émetteur
+  const [issuers, setIssuers] = useState<Issuer[]>([]);
+  const [selectedIssuerId, setSelectedIssuerId] = useState<string>("");
+
   const [issuerData, setIssuerData] = useState<Issuer | null>(null);
 
-  // 3) fonction pour charger l’émetteur depuis ton back
+  useEffect(() => {
+    async function fetchIssuers() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/issuer`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!res.ok) return;
+
+        const data: Issuer = await res.json();
+        // on ajoute l'ID pour le select (ici on réutilise le SIRET)
+        setIssuers([{ ...data, id: data.siret }]);
+        setSelectedIssuerId(data.siret);
+      } catch (err) {
+        console.error("fetchIssuers error →", err);
+      }
+    }
+    fetchIssuers();
+  }, []);
+
   const loadIssuer = async () => {
     try {
-      // Récupération du token stocké au login
       const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Token d’authentification introuvable. Assure-toi d’être bien connecté.");
-      }
+      if (!token) return;
 
-      // Requête vers ton backend Express
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/issuer`,
         {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          // si tu utilises aussi un cookie de session :
-          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      if (!res.ok) {
-        // 404 / 401 / 500 etc.
-        throw new Error(`Erreur réseau : ${res.status}`);
-      }
-
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: Issuer = await res.json();
       setIssuerData(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error("loadIssuer error →", err);
-      alert(err.message || "Impossible de charger l’émetteur");
+      alert("Impossible de charger l’émetteur");
     }
   };
 
-  console.log("🔄 issuerData state:", issuerData);
   return (
     <div className={styles.dashboardLayout}>
-      {/* Colonne 1 : ta sidebar (déjà présente ailleurs) */}
-
-      {/* Colonne 2 : panneau de réglages */}
       <SettingsPanel
         settings={settings}
         onChange={setSettings}
-        onLoadIssuer={loadIssuer}  // nouveau prop
+        issuers={issuers}
+        selectedIssuerId={selectedIssuerId}
+        onSelectIssuer={setSelectedIssuerId}
+        onLoadIssuer={loadIssuer}
       />
 
-      {/* Colonne 3 : formulaire */}
       <div className={styles.invoiceWrapper}>
-        <InvoiceForm
-          settings={settings}
-          initialIssuer={issuerData}
-        />
+        <InvoiceForm settings={settings} initialIssuer={issuerData} />
       </div>
     </div>
   );

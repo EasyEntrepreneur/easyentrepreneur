@@ -6,6 +6,7 @@ import styles from "./InvoiceForm.module.css";
 import { Settings } from "@/components/SettingsPanel";
 
 export type Issuer = {
+  id?: string;
   name: string;
   address: string;
   zip: string;
@@ -31,7 +32,7 @@ export default function InvoiceForm({
   settings,
   initialIssuer = null,
 }: InvoiceFormProps) {
-  // États de l’émetteur
+  // ── ÉMETTEUR ─────────────────────────────────────────────────────────────
   const [issuer, setIssuer] = useState({
     name: "",
     address: "",
@@ -39,10 +40,13 @@ export default function InvoiceForm({
     city: "",
     siret: "",
   });
+  const [showIssuerTva, setShowIssuerTva] = useState(true);
   const [issuerTva, setIssuerTva] = useState("");
+  const [showIssuerPhone, setShowIssuerPhone] = useState(true);
   const [issuerPhone, setIssuerPhone] = useState("");
+  const [issuerExtra, setIssuerExtra] = useState<string[]>([]);
 
-  // États du client (modelez-les de la même façon si vous voulez le pré-remplir aussi !)
+  // ── CLIENT ───────────────────────────────────────────────────────────────
   const [client, setClient] = useState({
     name: "",
     address: "",
@@ -50,43 +54,87 @@ export default function InvoiceForm({
     city: "",
     siret: "",
   });
+  const [showClientPhone, setShowClientPhone] = useState(true);
   const [clientPhone, setClientPhone] = useState("");
+  const [clientExtra, setClientExtra] = useState<string[]>([]);
 
-  // Date et lignes de facture
+  // ── DATE ─────────────────────────────────────────────────────────────────
   const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
+
+  // ── LIGNES DE FACTURE ────────────────────────────────────────────────────
   const [items, setItems] = useState<Item[]>([
     { description: "", quantity: 1, unitPrice: 0 },
   ]);
 
-  // Footer
+  // ── TVA PAR LIGNE ────────────────────────────────────────────────────────
+  // tableau des taux de TVA pour chaque ligne
+  const [lineVats, setLineVats] = useState<number[]>(
+    items.map(() => settings.vatRate)
+  );
+
+  // quand on ajoute/supprime une ligne, on ajuste automatiquement lineVats
+  useEffect(() => {
+    setLineVats((old) => {
+      const copy = [...old];
+      if (copy.length < items.length) {
+        // ajout de ligne
+        return [...copy, settings.vatRate];
+      } else if (copy.length > items.length) {
+        // suppression de ligne
+        return copy.slice(0, items.length);
+      }
+      return copy;
+    });
+  }, [items.length, settings.vatRate]);
+
+  const handleLineVatChange = (index: number, value: string) => {
+    const val = parseFloat(value) || 0;
+    setLineVats((old) => {
+      const copy = [...old];
+      copy[index] = val;
+      return copy;
+    });
+  };
+
+  // ── FOOTER ────────────────────────────────────────────────────────────────
   const [paymentInfo, setPaymentInfo] = useState("");
   const [legalNote, setLegalNote] = useState(
     "TVA non applicable, art. 293B du CGI"
   );
 
-  // Total hors taxe
+  // ── CALCULS ───────────────────────────────────────────────────────────────
   const totalHT = items.reduce(
     (sum, it) => sum + it.quantity * it.unitPrice,
     0
   );
+  // calcul global ou par ligne selon settings
+  const totalVAT = settings.enableVAT
+    ? settings.vatPerLine
+      ? items.reduce(
+          (sum, it, idx) =>
+            sum + it.quantity * it.unitPrice * (lineVats[idx] / 100),
+          0
+        )
+      : totalHT * (settings.vatRate / 100)
+    : 0;
+  const totalTTC = totalHT + totalVAT;
 
-  // Dès que initialIssuer change (après le click Charger), on pré-remplit l’émetteur :
+  // ── PRÉ-REMPLISSAGE ÉMETTEUR ─────────────────────────────────────────────
   useEffect(() => {
-    console.log("📥 InvoiceForm useEffect initialIssuer:", initialIssuer);
     if (initialIssuer) {
       setIssuer({
-        name: initialIssuer.name || "",
-        address: initialIssuer.address || "",
-        zip: initialIssuer.zip || "",
-        city: initialIssuer.city || "",
-        siret: initialIssuer.siret || "",
+        name: initialIssuer.name,
+        address: initialIssuer.address,
+        zip: initialIssuer.zip,
+        city: initialIssuer.city,
+        siret: initialIssuer.siret,
       });
       setIssuerTva(initialIssuer.vat || "");
       setIssuerPhone(initialIssuer.phone || "");
     }
   }, [initialIssuer]);
 
-  // Handlers pour les lignes
+  // ── HANDLERS LIGNES ──────────────────────────────────────────────────────
   const handleItemChange = (
     index: number,
     field: keyof Item,
@@ -96,7 +144,7 @@ export default function InvoiceForm({
     if (field === "quantity" || field === "unitPrice") {
       updated[index][field] = parseFloat(value) || 0;
     } else {
-      updated[index][field] = value;
+      (updated[index] as any)[field] = value;
     }
     setItems(updated);
   };
@@ -105,6 +153,26 @@ export default function InvoiceForm({
   const removeItem = (i: number) =>
     setItems(items.filter((_, idx) => idx !== i));
 
+  // ── HANDLERS CHAMPS LIBRES ÉMETTEUR ─────────────────────────────────────
+  const addIssuerField = () => setIssuerExtra([...issuerExtra, ""]);
+  const updateIssuerField = (i: number, val: string) => {
+    const u = [...issuerExtra];
+    u[i] = val;
+    setIssuerExtra(u);
+  };
+  const removeIssuerField = (i: number) =>
+    setIssuerExtra(issuerExtra.filter((_, idx) => idx !== i));
+
+  // ── HANDLERS CHAMPS LIBRES CLIENT ───────────────────────────────────────
+  const addClientField = () => setClientExtra([...clientExtra, ""]);
+  const updateClientField = (i: number, val: string) => {
+    const u = [...clientExtra];
+    u[i] = val;
+    setClientExtra(u);
+  };
+  const removeClientField = (i: number) =>
+    setClientExtra(clientExtra.filter((_, idx) => idx !== i));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: envoyer la facture au backend
@@ -112,7 +180,7 @@ export default function InvoiceForm({
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
-      {/* HEADER */}
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <div className={styles.header}>
         <h1 className={styles.title}>
           <input
@@ -122,14 +190,14 @@ export default function InvoiceForm({
           />
         </h1>
 
-        {/* ÉMETTEUR */}
+        {/* ═══ ÉMETTEUR ═════════════════════════════════════════════════════ */}
         <div className={styles.issuer}>
           <input
             className={styles.inputAuto}
             placeholder="Nom complet"
             value={issuer.name}
             onChange={(e) =>
-              setIssuer((prev) => ({ ...prev, name: e.target.value }))
+              setIssuer((p) => ({ ...p, name: e.target.value }))
             }
           />
           <input
@@ -137,7 +205,7 @@ export default function InvoiceForm({
             placeholder="Adresse"
             value={issuer.address}
             onChange={(e) =>
-              setIssuer((prev) => ({ ...prev, address: e.target.value }))
+              setIssuer((p) => ({ ...p, address: e.target.value }))
             }
           />
           <div className={styles.flexLine}>
@@ -146,7 +214,7 @@ export default function InvoiceForm({
               placeholder="Code postal"
               value={issuer.zip}
               onChange={(e) =>
-                setIssuer((prev) => ({ ...prev, zip: e.target.value }))
+                setIssuer((p) => ({ ...p, zip: e.target.value }))
               }
             />
             <input
@@ -154,7 +222,7 @@ export default function InvoiceForm({
               placeholder="Ville"
               value={issuer.city}
               onChange={(e) =>
-                setIssuer((prev) => ({ ...prev, city: e.target.value }))
+                setIssuer((p) => ({ ...p, city: e.target.value }))
               }
             />
           </div>
@@ -163,35 +231,85 @@ export default function InvoiceForm({
             placeholder="SIRET"
             value={issuer.siret}
             onChange={(e) =>
-              setIssuer((prev) => ({ ...prev, siret: e.target.value }))
+              setIssuer((p) => ({ ...p, siret: e.target.value }))
             }
           />
-          <div className={styles.fieldRowRight}>
-            <input
-              className={styles.inputAuto}
-              placeholder="N° TVA"
-              value={issuerTva}
-              onChange={(e) => setIssuerTva(e.target.value)}
-            />
-          </div>
-          <div className={styles.fieldRowRight}>
-            <input
-              className={styles.inputAuto}
-              placeholder="Tél"
-              value={issuerPhone}
-              onChange={(e) => setIssuerPhone(e.target.value)}
-            />
-          </div>
+
+          {/* TVA émetteur */}
+          {showIssuerTva && (
+            <div className={styles.fieldRowRight}>
+              <input
+                className={styles.inputAuto}
+                placeholder="N° TVA"
+                value={issuerTva}
+                onChange={(e) => setIssuerTva(e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.removeBtn}
+                onClick={() => setShowIssuerTva(false)}
+              >
+                −
+              </button>
+            </div>
+          )}
+
+          {/* Téléphone émetteur */}
+          {showIssuerPhone && (
+            <div className={styles.fieldRowRight}>
+              <input
+                className={styles.inputAuto}
+                placeholder="Tél"
+                value={issuerPhone}
+                onChange={(e) => setIssuerPhone(e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.removeBtn}
+                onClick={() => setShowIssuerPhone(false)}
+              >
+                −
+              </button>
+            </div>
+          )}
+
+          {/* Champs libres Émetteur */}
+          {issuerExtra.map((val, i) => (
+            <div key={i} className={styles.fieldRowRight}>
+              <input
+                className={styles.inputAuto}
+                placeholder="Champ"
+                value={val}
+                onChange={(e) => updateIssuerField(i, e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.removeBtn}
+                onClick={() => removeIssuerField(i)}
+              >
+                −
+              </button>
+            </div>
+          ))}
+
+          {/* + champ Émetteur */}
+          <button
+            type="button"
+            className={styles.addSectionBtn}
+            onClick={addIssuerField}
+          >
+            ＋
+          </button>
         </div>
 
-        {/* CLIENT */}
+        {/* ═══ CLIENT ═══════════════════════════════════════════════════════ */}
         <div className={styles.client}>
           <input
             className={styles.inputAuto}
             placeholder="Nom complet"
             value={client.name}
             onChange={(e) =>
-              setClient((prev) => ({ ...prev, name: e.target.value }))
+              setClient((p) => ({ ...p, name: e.target.value }))
             }
           />
           <input
@@ -199,7 +317,7 @@ export default function InvoiceForm({
             placeholder="Adresse"
             value={client.address}
             onChange={(e) =>
-              setClient((prev) => ({ ...prev, address: e.target.value }))
+              setClient((p) => ({ ...p, address: e.target.value }))
             }
           />
           <div className={styles.flexLine}>
@@ -208,7 +326,7 @@ export default function InvoiceForm({
               placeholder="Code postal"
               value={client.zip}
               onChange={(e) =>
-                setClient((prev) => ({ ...prev, zip: e.target.value }))
+                setClient((p) => ({ ...p, zip: e.target.value }))
               }
             />
             <input
@@ -216,7 +334,7 @@ export default function InvoiceForm({
               placeholder="Ville"
               value={client.city}
               onChange={(e) =>
-                setClient((prev) => ({ ...prev, city: e.target.value }))
+                setClient((p) => ({ ...p, city: e.target.value }))
               }
             />
           </div>
@@ -225,21 +343,60 @@ export default function InvoiceForm({
             placeholder="SIRET"
             value={client.siret}
             onChange={(e) =>
-              setClient((prev) => ({ ...prev, siret: e.target.value }))
+              setClient((p) => ({ ...p, siret: e.target.value }))
             }
           />
-          <div className={styles.fieldRowLeft}>
-            <input
-              className={styles.inputAuto}
-              placeholder="Tél"
-              value={clientPhone}
-              onChange={(e) => setClientPhone(e.target.value)}
-            />
-          </div>
+
+          {/* Téléphone client */}
+          {showClientPhone && (
+            <div className={styles.fieldRowLeft}>
+              <button
+                type="button"
+                className={styles.removeBtn}
+                onClick={() => setShowClientPhone(false)}
+              >
+                −
+              </button>
+              <input
+                className={styles.inputAuto}
+                placeholder="Tél"
+                value={clientPhone}
+                onChange={(e) => setClientPhone(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Champs libres Client */}
+          {clientExtra.map((val, i) => (
+            <div key={i} className={styles.fieldRowLeft}>
+              <button
+                type="button"
+                className={styles.removeBtn}
+                onClick={() => removeClientField(i)}
+              >
+                −
+              </button>
+              <input
+                className={styles.inputAuto}
+                placeholder="Champ"
+                value={val}
+                onChange={(e) => updateClientField(i, e.target.value)}
+              />
+            </div>
+          ))}
+
+          {/* + champ Client */}
+          <button
+            type="button"
+            className={styles.addSectionBtn}
+            onClick={addClientField}
+          >
+            ＋
+          </button>
         </div>
       </div>
 
-      {/* DATE */}
+      {/* ── DATE ───────────────────────────────────────────────────────────── */}
       <table className={styles.dateTable}>
         <tbody>
           <tr>
@@ -255,7 +412,7 @@ export default function InvoiceForm({
         </tbody>
       </table>
 
-      {/* LIGNES */}
+      {/* ── LIGNES ───────────────────────────────────────────────────────────── */}
       <table className={styles.table}>
         <thead>
           <tr>
@@ -263,6 +420,12 @@ export default function InvoiceForm({
             <th>Quantité</th>
             <th>Prix unitaire HT</th>
             <th>Prix total HT</th>
+            {settings.enableVAT && settings.vatPerLine && (
+              <>
+                <th>TVA&nbsp;(%)</th>
+                <th>Total TTC</th>
+              </>
+            )}
             <th></th>
           </tr>
         </thead>
@@ -271,11 +434,11 @@ export default function InvoiceForm({
             <tr key={i}>
               <td>
                 <input
+                  placeholder="Prestation"
                   value={it.description}
                   onChange={(e) =>
                     handleItemChange(i, "description", e.target.value)
                   }
-                  placeholder="Prestation"
                 />
               </td>
               <td>
@@ -297,11 +460,32 @@ export default function InvoiceForm({
                 />
               </td>
               <td>{(it.quantity * it.unitPrice).toFixed(2)} €</td>
+              {settings.enableVAT && settings.vatPerLine && (
+                <>
+                  <td>
+                    <input
+                      type="number"
+                      className={styles.smallInput}
+                      value={lineVats[i]}
+                      onChange={(e) =>
+                        handleLineVatChange(i, e.target.value)
+                      }
+                    />
+                  </td>
+                  <td>
+                    {(it.quantity *
+                      it.unitPrice *
+                      (1 + lineVats[i] / 100)
+                    ).toFixed(2)}{" "}
+                    €
+                  </td>
+                </>
+              )}
               <td>
                 <button
                   type="button"
-                  onClick={() => removeItem(i)}
                   className={styles.removeBtn}
+                  onClick={() => removeItem(i)}
                 >
                   −
                 </button>
@@ -311,38 +495,42 @@ export default function InvoiceForm({
         </tbody>
       </table>
       <div className={styles.addBtnContainer}>
-        <button type="button" onClick={addItem} className={styles.addLine}>
+        <button
+          type="button"
+          className={styles.addLine}
+          onClick={addItem}
+        >
           ＋
         </button>
       </div>
 
-      {/* FOOTER */}
+      {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
       <div className={styles.footerRow}>
         <textarea
           className={styles.payment}
+          placeholder="Informations complémentaires (IBAN, BIC...)"
           value={paymentInfo}
           onChange={(e) => setPaymentInfo(e.target.value)}
-          placeholder="Informations complémentaires (IBAN, BIC...)"
         />
         <div className={styles.summary}>
           <div>
             <span>Total HT</span>
             <span>{totalHT.toFixed(2)} €</span>
           </div>
-          {settings.enableVAT && (
+          {settings.enableVAT && settings.vatPerLine ? (
             <div>
-              <span>TVA (20 %)</span>
-              <span>{(totalHT * 0.2).toFixed(2)} €</span>
+              <span>TVA</span>
+              <span>{totalVAT.toFixed(2)} €</span>
             </div>
-          )}
+          ) : settings.enableVAT ? (
+            <div>
+              <span>TVA&nbsp;({settings.vatRate}&nbsp;%)</span>
+              <span>{totalVAT.toFixed(2)} €</span>
+            </div>
+          ) : null}
           <div className={styles.totalTTC}>
             <strong>Total TTC</strong>
-            <strong>
-              {settings.enableVAT
-                ? (totalHT * 1.2).toFixed(2)
-                : totalHT.toFixed(2)}{" "}
-              €
-            </strong>
+            <strong>{totalTTC.toFixed(2)} €</strong>
           </div>
         </div>
       </div>

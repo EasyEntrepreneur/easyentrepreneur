@@ -1,27 +1,40 @@
+// frontend/src/components/SettingsPanel.tsx
 import { FC } from "react";
 import styles from "./SettingsPanel.module.css";
+import type { Issuer } from "./InvoiceForm";
 
 export type Settings = {
   enableVAT: boolean;
   vatPerLine: boolean;
+  vatRate: number;
   showQuantity: boolean;
   showUnit: boolean;
-  // … ajoute d’autres options ici
 };
 
 interface Props {
   settings: Settings;
   onChange: (newSettings: Settings) => void;
+  issuers: Issuer[];
+  selectedIssuerId: string;
+  onSelectIssuer: (id: string) => void;
   onLoadIssuer: () => void;
 }
 
 export const SettingsPanel: FC<Props> = ({
   settings,
   onChange,
+  issuers,
+  selectedIssuerId,
+  onSelectIssuer,
   onLoadIssuer,
 }) => {
   const toggle = (key: keyof Settings) => {
     onChange({ ...settings, [key]: !settings[key] });
+  };
+
+  const updateVatRate = (val: string) => {
+    const rate = parseFloat(val) || 0;
+    onChange({ ...settings, vatRate: rate });
   };
 
   return (
@@ -35,9 +48,21 @@ export const SettingsPanel: FC<Props> = ({
         </button>
       </div>
 
+      {settings.enableVAT && !settings.vatPerLine && (
+        <div className={styles.field}>
+          <label>Taux TVA&nbsp;(%)</label>
+          <input
+            type="number"
+            className={styles.smallInput}
+            value={settings.vatRate}
+            onChange={(e) => updateVatRate(e.target.value)}
+          />
+        </div>
+      )}
+
       {settings.enableVAT && (
         <div className={styles.field}>
-          <label>TVA variable par ligne</label>
+          <label>TVA par ligne</label>
           <button onClick={() => toggle("vatPerLine")}>
             {settings.vatPerLine ? "Oui" : "Non"}
           </button>
@@ -45,28 +70,23 @@ export const SettingsPanel: FC<Props> = ({
       )}
 
       <div className={styles.field}>
-        <label>Quantité</label>
-        <button onClick={() => toggle("showQuantity")}>
-          {settings.showQuantity ? "Oui" : "Non"}
-        </button>
+        <label>Nom émetteur</label>
+        <select
+          className={styles.issuerSelect}
+          value={selectedIssuerId}
+          onChange={(e) => onSelectIssuer(e.target.value)}
+        >
+          {issuers.map((iss) => (
+            <option key={iss.id!} value={iss.id!}>
+              {iss.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className={styles.field}>
-        <label>Unité</label>
-        <button onClick={() => toggle("showUnit")}>
-          {settings.showUnit ? "Oui" : "Non"}
-        </button>
-      </div>
-
-      <div className={styles.field}>
-        <label>Émetteur auto</label>
-        <button
-          onClick={() => {
-            console.log("⚙️ bouton Charger cliqué");
-            onLoadIssuer();
-          }}
-        >Charger</button>
+        <button onClick={onLoadIssuer}>Charger</button>
       </div>
     </aside>
-);
+  );
 };
