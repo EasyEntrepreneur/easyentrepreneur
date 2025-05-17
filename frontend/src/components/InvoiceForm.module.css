@@ -264,3 +264,16 @@
   border-color: #007BFF;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
 }
+
+.descriptionTextArea {
+  box-Sizing: border-box;
+  resize: none;
+  overflow: hidden;
+  min-height: 32px;
+  width: 100%;
+  font-Family: inherit;
+  font-Size: 1rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+}

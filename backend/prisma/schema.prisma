@@ -141,6 +141,7 @@ model Invoice {
   iban String?
   bic  String?
 
+  pdfPath String? // Chemin du PDF stocké (optionnel)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
