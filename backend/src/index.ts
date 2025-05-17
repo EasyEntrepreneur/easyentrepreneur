@@ -67,7 +67,7 @@ app.use('/api', updateUserInfoRoutes);
 
 app.use('/api/invoices', invoicesRoute)
 app.use("/api/issuer", issuerRouter);
-app.use("/api/issuer", clientRouter);
+app.use("/api/client", clientRouter);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)

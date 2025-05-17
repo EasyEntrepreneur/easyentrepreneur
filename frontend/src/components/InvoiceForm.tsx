@@ -211,8 +211,6 @@ export default function InvoiceForm({
       client: clientPayload,
       items: itemsPayload,
       paymentInfo,
-      legalNote,
-      issuedAt: date,
       // Ajoute ici les autres champs à envoyer si nécessaire
     };
 

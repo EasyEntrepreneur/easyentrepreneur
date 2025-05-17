@@ -6,7 +6,8 @@ const router = Router()
 
 // GET /invoices — toutes les factures du user connecté
 router.get('/', authenticateToken, async (req, res) => {
-  const userId = req.user.id
+  const userId = req.user.userId
+  console.log('userId reçu:', userId)
 
   try {
     const invoices = await prisma.invoice.findMany({
@@ -23,7 +24,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // GET /invoices/:id — une facture spécifique
 router.get('/:id', authenticateToken, async (req, res) => {
-  const userId = req.user.id
+  const userId = req.user.userId
   const invoiceId = req.params.id
 
   try {
@@ -45,7 +46,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // POST /invoices — création d’une facture et création/lien du client
 router.post('/', authenticateToken, async (req, res) => {
-  const userId = req.user.id
+  const userId = req.user.userId
   const {
     client, // On attend un objet client complet
     dueAt,
@@ -68,7 +69,7 @@ router.post('/', authenticateToken, async (req, res) => {
     if (!dbClient) {
       dbClient = await prisma.client.findFirst({
         where: {
-          userId,
+          userId: userId, // userId DOIT être défini ici
           name: client.name,
           address: client.address,
           zip: client.zip,
@@ -77,12 +78,20 @@ router.post('/', authenticateToken, async (req, res) => {
       })
     }
     if (!dbClient) {
+      const clientToInsert = {
+        name: client.name,
+        address: client.address,
+        zip: client.zip,
+        city: client.city,
+        siret: client.siret || "",
+        vat: client.vat || "",
+        phone: client.phone || "",
+        userId: userId // userId 100% garanti ici !
+      };
+      console.log('>> clientToInsert', clientToInsert);
       dbClient = await prisma.client.create({
-        data: {
-          ...client,
-          userId,
-        }
-      })
+        data: clientToInsert
+      });
     }
 
     // Générer un numéro de facture (ex : 2024-001)
@@ -134,7 +143,6 @@ router.post('/', authenticateToken, async (req, res) => {
         clientAddress: client.address,
         clientZip: client.zip,
         clientCity: client.city,
-        clientCountry: client.country,
         clientEmail: client.email,
         clientPhone: client.phone,
         dueAt: dueAt ? new Date(dueAt) : undefined,

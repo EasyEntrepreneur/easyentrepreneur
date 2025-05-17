@@ -122,7 +122,6 @@ model Invoice {
   clientAddress String
   clientZip     String
   clientCity    String
-  clientCountry String
   clientEmail   String?
   clientPhone   String?
   clientId   String?
@@ -138,6 +137,7 @@ model Invoice {
   totalTVA Float
   totalTTC Float
 
+  paymentInfo   String? // <-- infos de paiement (IBAN, instructions, etc)
   iban String?
   bic  String?
 
