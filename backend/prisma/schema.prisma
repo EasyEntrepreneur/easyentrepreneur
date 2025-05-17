@@ -18,15 +18,18 @@ model User {
   role               Role            @default(USER)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
-  documents          Document[]
-  billings           BillingInfo[]
+
   stripeCustomerId   String?
-  paymentMethods     PaymentMethod[]
+
   subscriptionId     String?
   currentPlan        Plan            @default(FREEMIUM)
+  paymentMethods     PaymentMethod[]
+  documents          Document[]
+  billings           BillingInfo[]  
   usages             Usage[] // Relation vers les usages
-  companyInfo        CompanyInfo? // Relation vers l'entreprise
+  companyInfo        CompanyInfo[] // Relation vers l'entreprise
   invoices           Invoice[] // 🔁 Relation inverse des factures
+  client             Client[]
 }
 
 enum Role {
@@ -122,6 +125,8 @@ model Invoice {
   clientCountry String
   clientEmail   String?
   clientPhone   String?
+  clientId   String?
+  client     Client? @relation(fields: [clientId], references: [id])
 
   status   InvoiceStatus @default(PENDING)
   issuedAt DateTime      @default(now())
@@ -160,4 +165,24 @@ enum InvoiceStatus {
   PENDING
   FAILED
   CANCELED
+}
+
+
+model Client {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  address   String
+  zip       String
+  city      String
+  siret     String
+  vat       String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  invoices Invoice[]    // <--- RELATION INVERSE !
+
+  @@index([userId])
 }

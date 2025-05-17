@@ -1,4 +1,3 @@
-// frontend/src/components/InvoiceForm.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,6 +15,18 @@ export type Issuer = {
   phone?: string;
 };
 
+// Ajout du type Client
+type Client = {
+  name: string;
+  address: string;
+  zip: string;
+  city: string;
+  siret?: string;
+  vat?: string;
+  phone?: string;
+  // Ajoute ici country/email si tu les ajoutes plus tard !
+};
+
 type Item = {
   description: string;
   quantity: number;
@@ -24,7 +35,6 @@ type Item = {
 
 interface InvoiceFormProps {
   settings: Settings;
-  /** données chargées depuis le backend */
   initialIssuer?: Issuer | null;
 }
 
@@ -47,12 +57,14 @@ export default function InvoiceForm({
   const [issuerExtra, setIssuerExtra] = useState<string[]>([]);
 
   // ── CLIENT ───────────────────────────────────────────────────────────────
-  const [client, setClient] = useState({
+  const [client, setClient] = useState<Client>({
     name: "",
     address: "",
     zip: "",
     city: "",
     siret: "",
+    vat: "",
+    phone: "",
   });
   const [showClientPhone, setShowClientPhone] = useState(true);
   const [clientPhone, setClientPhone] = useState("");
@@ -67,12 +79,9 @@ export default function InvoiceForm({
   ]);
 
   // ── TVA PAR LIGNE ────────────────────────────────────────────────────────
-  // tableau des taux de TVA pour chaque ligne
   const [lineVats, setLineVats] = useState<number[]>(
     items.map(() => settings.vatRate)
   );
-
-  // quand on ajoute/supprime une ligne, on ajuste automatiquement lineVats
   useEffect(() => {
     setLineVats((old) => {
       const copy = [...old];
@@ -173,9 +182,60 @@ export default function InvoiceForm({
   const removeClientField = (i: number) =>
     setClientExtra(clientExtra.filter((_, idx) => idx !== i));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // --- SOUMISSION DU FORMULAIRE ---
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: envoyer la facture au backend
+
+    // --- Préparation du payload avec le client ---
+    const clientPayload = {
+      name: client.name,
+      address: client.address,
+      zip: client.zip,
+      city: client.city,
+      siret: client.siret,
+      vat: client.vat,
+      phone: clientPhone,
+    };
+
+    // Items enrichis avec TVA par ligne si besoin
+    const itemsPayload = items.map((item, i) => ({
+      ...item,
+      vatRate: settings.enableVAT
+        ? settings.vatPerLine
+          ? lineVats[i]
+          : settings.vatRate
+        : 0,
+    }));
+
+    const payload = {
+      client: clientPayload,
+      items: itemsPayload,
+      paymentInfo,
+      legalNote,
+      issuedAt: date,
+      // Ajoute ici les autres champs à envoyer si nécessaire
+    };
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Non authentifié");
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Erreur lors de la création de la facture");
+      alert("Facture enregistrée !");
+      // Optionnel: reset le formulaire ici si tu veux
+    } catch (err) {
+      console.error("Erreur création facture :", err);
+      alert("Erreur lors de la création de la facture !");
+    }
   };
 
   return (

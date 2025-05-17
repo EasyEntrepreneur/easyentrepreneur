@@ -21,6 +21,7 @@ import confirmEmailRoute from './routes/confirmEmail';
 import updateUserInfoRoutes from './routes/updateUserInfo';
 import invoicesRoute from './routes/invoices'
 import issuerRouter from "./routes/issuer";
+import clientRouter from "./routes/client";
 
 
 dotenv.config()
@@ -66,6 +67,7 @@ app.use('/api', updateUserInfoRoutes);
 
 app.use('/api/invoices', invoicesRoute)
 app.use("/api/issuer", issuerRouter);
+app.use("/api/issuer", clientRouter);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)

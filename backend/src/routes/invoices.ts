@@ -11,7 +11,7 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const invoices = await prisma.invoice.findMany({
       where: { userId },
-      include: { items: true },
+      include: { items: true, client: true },
       orderBy: { issuedAt: 'desc' },
     })
     res.json(invoices)
@@ -29,7 +29,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const invoice = await prisma.invoice.findFirst({
       where: { id: invoiceId, userId },
-      include: { items: true },
+      include: { items: true, client: true },
     })
 
     if (!invoice) {
@@ -43,24 +43,48 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-// POST /invoices — création d’une facture
+// POST /invoices — création d’une facture et création/lien du client
 router.post('/', authenticateToken, async (req, res) => {
   const userId = req.user.id
   const {
-    clientName,
-    clientAddress,
-    clientZip,
-    clientCity,
-    clientCountry,
-    clientEmail,
-    clientPhone,
+    client, // On attend un objet client complet
     dueAt,
     iban,
     bic,
     items,
+    ...rest // Les autres champs de facture (legalNote, etc)
   } = req.body
 
   try {
+    // 1. Récupère ou crée le client
+    let dbClient = null
+
+    // Recherche : par SIRET si présent, sinon par nom+adresse+cp+ville
+    if (client.siret) {
+      dbClient = await prisma.client.findFirst({
+        where: { userId, siret: client.siret }
+      })
+    }
+    if (!dbClient) {
+      dbClient = await prisma.client.findFirst({
+        where: {
+          userId,
+          name: client.name,
+          address: client.address,
+          zip: client.zip,
+          city: client.city,
+        }
+      })
+    }
+    if (!dbClient) {
+      dbClient = await prisma.client.create({
+        data: {
+          ...client,
+          userId,
+        }
+      })
+    }
+
     // Générer un numéro de facture (ex : 2024-001)
     const lastInvoice = await prisma.invoice.findFirst({
       where: { userId },
@@ -105,26 +129,28 @@ router.post('/', authenticateToken, async (req, res) => {
       data: {
         number,
         userId,
-        clientName,
-        clientAddress,
-        clientZip,
-        clientCity,
-        clientCountry,
-        clientEmail,
-        clientPhone,
+        clientId: dbClient.id, // On lie à la table client !
+        clientName: client.name,            // (historique figé pour la facture)
+        clientAddress: client.address,
+        clientZip: client.zip,
+        clientCity: client.city,
+        clientCountry: client.country,
+        clientEmail: client.email,
+        clientPhone: client.phone,
         dueAt: dueAt ? new Date(dueAt) : undefined,
         iban,
         bic,
         totalHT,
         totalTVA,
         totalTTC,
+        ...rest, // ex: legalNote, paymentInfo, etc
         items: {
           createMany: {
             data: invoiceItems,
           },
         },
       },
-      include: { items: true },
+      include: { items: true, client: true },
     })
 
     res.status(201).json(newInvoice)
