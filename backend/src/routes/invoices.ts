@@ -16,7 +16,12 @@ router.get('/', authenticateToken, async (req, res) => {
       include: { items: true, client: true },
       orderBy: { issuedAt: 'desc' },
     })
-    res.json(invoices)
+    // Ajoute le champ pdfUrl pour chaque facture (utilisé côté front)
+    const invoicesWithPdfUrl = invoices.map(inv => ({
+      ...inv,
+      pdfUrl: inv.number ? `/invoices/${inv.number}.pdf` : null
+    }))
+    res.json(invoicesWithPdfUrl)
   } catch (error) {
     console.error('Erreur GET /invoices :', error)
     res.status(500).json({ error: 'Erreur serveur lors de la récupération des factures.' })
@@ -35,7 +40,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!invoice) {
       return res.status(404).json({ error: 'Facture introuvable.' })
     }
-    res.json(invoice)
+    // Ajoute le champ pdfUrl pour le front
+    res.json({
+      ...invoice,
+      pdfUrl: invoice.number ? `/invoices/${invoice.number}.pdf` : null
+    })
   } catch (error) {
     console.error('Erreur GET /invoices/:id :', error)
     res.status(500).json({ error: 'Erreur serveur lors de la récupération de la facture.' })
@@ -101,7 +110,7 @@ function generateInvoiceHtml(invoice: any) {
   `
 }
 
-// POST /invoices — création d’une facture et création/lien du client + génération PDF
+// POST /invoices — création d’une facture et génération PDF
 router.post('/', authenticateToken, async (req, res) => {
   const userId = req.user.userId
   const {
@@ -182,7 +191,7 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     })
 
-    // Création en base (SANS HTML reçu dans Prisma !)
+    // Création en base
     let newInvoice = await prisma.invoice.create({
       data: {
         number,
@@ -205,9 +214,7 @@ router.post('/', authenticateToken, async (req, res) => {
       include: { items: true, client: true },
     })
 
-
-    // Génération du PDF avec le HTML reçu du front
-    // (fallback : utilise generateInvoiceHtml si jamais invoiceHtml est vide)
+    // Génération du PDF avec le HTML reçu du front (ou fallback)
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
     const browser = await puppeteer.launch({ headless: true })
     const page = await browser.newPage()
@@ -218,24 +225,29 @@ router.post('/', authenticateToken, async (req, res) => {
     // Sauvegarde le PDF dans /invoices_pdf/
     const pdfDir = path.join(__dirname, "../../invoices_pdf")
     await fs.mkdir(pdfDir, { recursive: true })
-    const pdfPath = path.join(pdfDir, `${newInvoice.number}.pdf`)
+    const pdfFilename = `${newInvoice.number}.pdf`
+    const pdfPath = path.join(pdfDir, pdfFilename)
     await fs.writeFile(pdfPath, pdfBuffer)
 
-    // Met à jour la facture avec le chemin du PDF
+    // Met à jour la facture avec juste le NOM DU FICHIER PDF (pas le chemin complet !)
     newInvoice = await prisma.invoice.update({
       where: { id: newInvoice.id },
-      data: { pdfPath },
+      data: { pdfPath: pdfFilename }, // <-- Juste le nom, ex: 2024-031.pdf
       include: { items: true, client: true },
     })
 
-    res.status(201).json(newInvoice)
+    // Retourne la facture + l’URL web du PDF
+    res.status(201).json({
+      ...newInvoice,
+      pdfUrl: `/invoices/${pdfFilename}`
+    })
   } catch (error) {
     console.error('Erreur POST /invoices :', error)
     res.status(500).json({ error: 'Erreur serveur lors de la création de la facture.' })
   }
 })
 
-// GET /invoices/:id/pdf — Télécharge le PDF
+// GET /invoices/:id/pdf — Télécharge le PDF (toujours sécurisé)
 router.get('/:id/pdf', authenticateToken, async (req, res) => {
   const userId = req.user.userId
   const invoiceId = req.params.id
@@ -248,9 +260,11 @@ router.get('/:id/pdf', authenticateToken, async (req, res) => {
     return res.status(404).json({ error: "PDF non trouvé" })
   }
 
+  // Le nom du fichier PDF est stocké dans pdfPath
+  const pdfFilePath = path.join(__dirname, "../../invoices_pdf", invoice.pdfPath)
   res.setHeader("Content-Type", "application/pdf")
   res.setHeader("Content-Disposition", `inline; filename="Facture-${invoice.number}.pdf"`)
-  res.sendFile(path.resolve(invoice.pdfPath))
+  res.sendFile(path.resolve(pdfFilePath))
 })
 
 export default router

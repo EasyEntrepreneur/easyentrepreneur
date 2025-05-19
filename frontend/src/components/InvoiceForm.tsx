@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import styles from "./InvoiceForm.module.css";
 import { Settings } from "@/components/SettingsPanel";
-import InvoicePreview from "@/components/InvoicePreview"; // à créer à côté
+import InvoicePreview from "@/components/InvoicePreview";
 
 export type Issuer = {
   id?: string;
@@ -47,7 +47,7 @@ export default function InvoiceForm({
 }: InvoiceFormProps) {
   const router = useRouter();
 
-  // ── ÉMETTEUR ──────────────────────────────
+  // ÉMETTEUR
   const [issuer, setIssuer] = useState({
     name: "",
     address: "",
@@ -62,7 +62,7 @@ export default function InvoiceForm({
   const [issuerPhone, setIssuerPhone] = useState("");
   const [issuerExtra, setIssuerExtra] = useState<string[]>([]);
 
-  // ── CLIENT ────────────────────────────────
+  // CLIENT
   const [client, setClient] = useState<Client>({
     name: "",
     address: "",
@@ -76,15 +76,15 @@ export default function InvoiceForm({
   const [clientPhone, setClientPhone] = useState("");
   const [clientExtra, setClientExtra] = useState<string[]>([]);
 
-  // ── DATE ────────────────────────────────
+  // DATE
   const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
 
-  // ── LIGNES DE FACTURE ───────────────────
+  // LIGNES DE FACTURE
   const [items, setItems] = useState<Item[]>([
     { description: "", quantity: 1, unitPrice: 0 },
   ]);
 
-  // ── TVA PAR LIGNE ───────────────────────
+  // TVA PAR LIGNE
   const [lineVats, setLineVats] = useState<number[]>(
     items.map(() => settings.vatRate)
   );
@@ -111,13 +111,13 @@ export default function InvoiceForm({
     });
   };
 
-  // ── FOOTER ──────────────────────────────
+  // FOOTER
   const [paymentInfo, setPaymentInfo] = useState("");
   const [legalNote, setLegalNote] = useState(
     "TVA non applicable, art. 293B du CGI"
   );
 
-  // ── CALCULS ─────────────────────────────
+  // CALCULS
   const totalHT = items.reduce(
     (sum, it) => sum + it.quantity * it.unitPrice,
     0
@@ -133,7 +133,7 @@ export default function InvoiceForm({
     : 0;
   const totalTTC = totalHT + totalVAT;
 
-  // ── PRÉ-REMPLISSAGE ÉMETTEUR / CLIENT ─────
+  // PRÉ-REMPLISSAGE ÉMETTEUR / CLIENT
   useEffect(() => {
     if (initialIssuer) {
       setIssuer({
@@ -162,7 +162,7 @@ export default function InvoiceForm({
     }
   }, [initialClient]);
 
-  // ── HANDLERS LIGNES ─────────────────────
+  // HANDLERS LIGNES
   const handleItemChange = (
     index: number,
     field: keyof Item,
@@ -181,7 +181,7 @@ export default function InvoiceForm({
   const removeItem = (i: number) =>
     setItems(items.filter((_, idx) => idx !== i));
 
-  // ── HANDLERS CHAMPS LIBRES ÉMETTEUR ──────
+  // HANDLERS CHAMPS LIBRES ÉMETTEUR
   const addIssuerField = () => setIssuerExtra([...issuerExtra, ""]);
   const updateIssuerField = (i: number, val: string) => {
     const u = [...issuerExtra];
@@ -191,7 +191,7 @@ export default function InvoiceForm({
   const removeIssuerField = (i: number) =>
     setIssuerExtra(issuerExtra.filter((_, idx) => idx !== i));
 
-  // ── HANDLERS CHAMPS LIBRES CLIENT ────────
+  // HANDLERS CHAMPS LIBRES CLIENT
   const addClientField = () => setClientExtra([...clientExtra, ""]);
   const updateClientField = (i: number, val: string) => {
     const u = [...clientExtra];
@@ -205,7 +205,6 @@ export default function InvoiceForm({
   const previewRef = useRef<HTMLDivElement>(null);
 
   // --- SOUMISSION DU FORMULAIRE ---
-
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,28 +288,32 @@ export default function InvoiceForm({
           if (data?.error) message = data.error;
         } catch {}
         toast.error(message, { duration: 5000 });
+        setLoading(false);
         return;
       }
 
-      // Si l'API retourne l'ID de la facture créée, le récupérer
+      // Correction : récupère l'id ET le number depuis la réponse
+      let pdfUrl = null;
       let factureId = null;
+      let factureNumber = null;
       try {
         const data = await res.json();
         factureId = data?.id || data?.invoiceId || null;
+        factureNumber = data?.number || null;
       } catch {}
 
-      // On stocke une indication dans le sessionStorage pour afficher le toast après redirect
+      // Stocke le number pour le toast de la page /dashboard/factures
       sessionStorage.setItem(
         "showInvoiceToast",
         JSON.stringify({
           id: factureId,
+          number: factureNumber, // ← le number sera utilisé côté /dashboard/factures pour matcher
+          pdfUrl: pdfUrl
         })
       );
 
       // Rediriger vers la liste des factures
       router.push("/dashboard/factures");
-
-      // On n'affiche pas le toast ici, il le sera sur la page suivante via useEffect
 
     } catch (err: any) {
       toast.error(
@@ -318,12 +321,11 @@ export default function InvoiceForm({
         { duration: 5000 }
       );
     } finally {
-    setLoading(false); // Dans le finally pour être certain qu'il repasse à false même si erreur
+      setLoading(false);
     }
   };
 
-  // Pas besoin d'afficher le toast ici, il sera affiché dans la page des factures
-  // via un useEffect placé dans /dashboard/factures/page.tsx
+  // Pas besoin d'afficher le toast ici, il sera affiché dans la page des factures via un useEffect
 
   return (
     <>
@@ -339,7 +341,7 @@ export default function InvoiceForm({
               onChange={e => setInvoiceTitle(e.target.value)}
             />
           </h1>
-          {/* ═══ ÉMETTEUR ═════════════════════════════════════════════════════ */}
+          {/* ÉMETTEUR */}
           <div className={styles.issuer}>
             <input
               className={styles.inputAuto}
@@ -451,7 +453,7 @@ export default function InvoiceForm({
             </button>
           </div>
 
-          {/* ═══ CLIENT ═══════════════════════════════════════════════════════ */}
+          {/* CLIENT */}
           <div className={styles.client}>
             <input
               className={styles.inputAuto}
@@ -545,7 +547,7 @@ export default function InvoiceForm({
           </div>
         </div>
 
-        {/* ── DATE ───────────────────────────────────────────────────────────── */}
+        {/* DATE */}
         <table className={styles.dateTable}>
           <tbody>
             <tr>
@@ -561,7 +563,7 @@ export default function InvoiceForm({
           </tbody>
         </table>
 
-        {/* ── LIGNES ───────────────────────────────────────────────────────────── */}
+        {/* LIGNES */}
         <table className={styles.table}>
           <thead>
             <tr>
@@ -673,7 +675,7 @@ export default function InvoiceForm({
           </button>
         </div>
 
-        {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
+        {/* FOOTER */}
         <div className={styles.footerRow}>
           <textarea
             rows={1}
@@ -762,7 +764,6 @@ export default function InvoiceForm({
           disabled={loading}
         >
           {loading ? (
-            // Met un spinner si tu veux, sinon juste un texte :
             <span>
               <span className={styles.spinner} /> Génération...
             </span>
@@ -772,7 +773,7 @@ export default function InvoiceForm({
         </button>
       </form>
 
-      {/* ==== PREVIEW CACHÉ POUR PDF ==== */}
+      {/* PREVIEW CACHÉ POUR PDF */}
       <div ref={previewRef} style={{ display: "none" }}>
         <InvoicePreview
           issuer={{
@@ -804,7 +805,6 @@ export default function InvoiceForm({
           totalTTC={totalTTC}
         />
       </div>
-      {/* Aperçu PDF supprimé comme demandé */}
     </>
   );
 }

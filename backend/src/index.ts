@@ -1,4 +1,5 @@
 import express from 'express'
+import path from 'path';
 import cors from 'cors'
 import dotenv from 'dotenv'
 import documentRoutes from './routes/documents'
@@ -68,6 +69,8 @@ app.use('/api', updateUserInfoRoutes);
 app.use('/api/invoices', invoicesRoute)
 app.use("/api/issuer", issuerRouter);
 app.use("/api/client", clientRouter);
+
+app.use('/invoices', express.static(path.join(__dirname, 'invoices_pdf')));
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)
