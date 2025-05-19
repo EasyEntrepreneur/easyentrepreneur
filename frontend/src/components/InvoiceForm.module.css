@@ -1,11 +1,20 @@
 .form {
-  max-width: 960px;
+  width: 100%;
+  max-width: 960px; /* Ajoute ça */
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 2rem;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 5px 20px rgba(0,0,0,0.05);
   font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+@media (max-width: 900px) {
+  .form {
+    padding: 1rem;
+  }
 }
 
 /* HEADER grid */
@@ -15,6 +24,13 @@
   grid-template-rows: auto auto auto;
   gap: 1.5rem;
   margin-bottom: 2rem;
+}
+@media (max-width: 900px) {
+  .header {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    gap: 1rem;
+  }
 }
 
 /* TITRE aligné à droite */
@@ -49,6 +65,12 @@
   display: flex;
   gap: 0.75rem;
 }
+@media (max-width: 700px) {
+  .flexLine {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+}
 
 /* EMETTEUR */
 .issuer {
@@ -66,6 +88,13 @@
   flex-direction: column;
   gap: 0.5rem;
   text-align: right;
+}
+@media (max-width: 900px) {
+  .issuer, .client {
+    grid-column: auto;
+    grid-row: auto;
+    text-align: left;
+  }
 }
 
 /* ROW with remove on right */
@@ -110,8 +139,6 @@
   cursor: pointer;
   margin-top: 4px;
 }
-
-/* 1) Bouton + sous la section client aligné à droite */
 .client .addSectionBtn {
   align-self: flex-end;
 }
@@ -121,6 +148,11 @@
   width: 50%;
   border-collapse: collapse;
   margin-bottom: 1.5rem;
+}
+@media (max-width: 700px) {
+  .dateTable {
+    width: 100%;
+  }
 }
 .dateTable td {
   border: 1px solid #ddd;
@@ -143,6 +175,8 @@
   border-collapse: collapse;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
+  table-layout: auto;
+  word-break: break-word;
 }
 .table th {
   background: #efefef;
@@ -193,6 +227,13 @@
   gap: 2rem;
   margin-top: 2rem;
   align-items: flex-start;
+  flex-wrap: wrap;
+}
+@media (max-width: 700px) {
+  .footerRow {
+    flex-direction: column;
+    gap: 1rem;
+  }
 }
 
 .payment {
@@ -209,6 +250,11 @@
 .summary {
   width: 240px;
   font-size: 0.9rem;
+}
+@media (max-width: 700px) {
+  .summary {
+    width: 100%;
+  }
 }
 .summary > div {
   display: flex;
@@ -228,8 +274,8 @@
   outline: none !important;
   box-shadow: none !important;
   width: 100%;
-  text-align: center;      /* texte centré */
-  margin: 2rem auto 0;     /* espace au-dessus + centré */
+  text-align: center;
+  margin: 2rem auto 0;
   display: block;
   resize: none;
 }
@@ -276,4 +322,19 @@
   border: none;
   background: transparent;
   padding: 0;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid #fff;
+  border-top: 2px solid #6B8DFC;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

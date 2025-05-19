@@ -10,6 +10,24 @@
   box-shadow: var(--shadow-md);
 }
 
+.settingsPanel select {
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Pour masquer le texte des <option> trop longs */
+.settingsPanel select option {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
 .h2 {
   margin-bottom: 1rem;
   font-size: 1.25rem;

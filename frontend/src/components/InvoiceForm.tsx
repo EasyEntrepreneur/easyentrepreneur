@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import styles from "./InvoiceForm.module.css";
 import { Settings } from "@/components/SettingsPanel";
 import InvoicePreview from "@/components/InvoicePreview"; // à créer à côté
@@ -43,6 +45,8 @@ export default function InvoiceForm({
   initialIssuer = null,
   initialClient = null,
 }: InvoiceFormProps) {
+  const router = useRouter();
+
   // ── ÉMETTEUR ──────────────────────────────
   const [issuer, setIssuer] = useState({
     name: "",
@@ -201,8 +205,11 @@ export default function InvoiceForm({
   const previewRef = useRef<HTMLDivElement>(null);
 
   // --- SOUMISSION DU FORMULAIRE ---
+
+  const [loading, setLoading] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     const clientPayload = {
       name: client.name,
@@ -226,7 +233,27 @@ export default function InvoiceForm({
     // ==== RÉCUPÈRE LE HTML DU PREVIEW ====
     let invoiceHtml = "";
     if (previewRef.current) {
-      invoiceHtml = previewRef.current.innerHTML;
+      const previewHtml = previewRef.current.innerHTML;
+      const style = `
+        <style>
+          .table th, .dateLabel {
+            background: #6B8DFC !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        </style>
+      `;
+      invoiceHtml = `
+        <html>
+          <head>
+            <meta charset="UTF-8" />
+            ${style}
+          </head>
+          <body>
+            ${previewHtml}
+          </body>
+        </html>
+      `;
     }
 
     const payload = {
@@ -255,17 +282,54 @@ export default function InvoiceForm({
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Erreur lors de la création de la facture");
-      alert("Facture enregistrée !");
-    } catch (err) {
-      console.error("Erreur création facture :", err);
-      alert("Erreur lors de la création de la facture !");
+      if (!res.ok) {
+        let message = "Erreur lors de la création de la facture !";
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {}
+        toast.error(message, { duration: 5000 });
+        return;
+      }
+
+      // Si l'API retourne l'ID de la facture créée, le récupérer
+      let factureId = null;
+      try {
+        const data = await res.json();
+        factureId = data?.id || data?.invoiceId || null;
+      } catch {}
+
+      // On stocke une indication dans le sessionStorage pour afficher le toast après redirect
+      sessionStorage.setItem(
+        "showInvoiceToast",
+        JSON.stringify({
+          id: factureId,
+        })
+      );
+
+      // Rediriger vers la liste des factures
+      router.push("/dashboard/factures");
+
+      // On n'affiche pas le toast ici, il le sera sur la page suivante via useEffect
+
+    } catch (err: any) {
+      toast.error(
+        err?.message || "Erreur lors de la création de la facture !",
+        { duration: 5000 }
+      );
+    } finally {
+    setLoading(false); // Dans le finally pour être certain qu'il repasse à false même si erreur
     }
   };
+
+  // Pas besoin d'afficher le toast ici, il sera affiché dans la page des factures
+  // via un useEffect placé dans /dashboard/factures/page.tsx
 
   return (
     <>
       <form className={styles.form} onSubmit={handleSubmit}>
+        {/* ...le reste de ton formulaire inchangé... */}
+
         {/* ── HEADER ─────────────────────────────────────────────────────────── */}
         <div className={styles.header}>
           <h1 className={styles.title}>
@@ -523,16 +587,12 @@ export default function InvoiceForm({
                     value={it.description}
                     onChange={e => handleItemChange(i, "description", e.target.value)}
                     ref={el => {
-                      // Fonction de resize largeur et hauteur
                       if (el) {
                         el.style.height = 'auto';
                         el.style.height = el.scrollHeight + 'px';
-
-                        // Largeur auto (simple, pas parfait mais "OK" pour un effet de base)
-                        // On prend le nombre de caractères x une largeur moyenne
-                        const charWidth = 8; // px, ajuste si tu veux
-                        const minWidth = 120; // px
-                        const maxWidth = 320; // px
+                        const charWidth = 8;
+                        const minWidth = 120;
+                        const maxWidth = 320;
                         const width = Math.max(
                           minWidth,
                           Math.min(el.value.length * charWidth, maxWidth)
@@ -622,31 +682,27 @@ export default function InvoiceForm({
             value={paymentInfo}
             onChange={(e) => setPaymentInfo(e.target.value)}
             ref={el => {
-                      // Fonction de resize largeur et hauteur
-                      if (el) {
-                        el.style.height = 'auto';
-                        el.style.height = el.scrollHeight + 'px';
-
-                        // Largeur auto (simple, pas parfait mais "OK" pour un effet de base)
-                        // On prend le nombre de caractères x une largeur moyenne
-                        const charWidth = 8; // px, ajuste si tu veux
-                        const minWidth = 400; // px
-                        const maxWidth = 800; // px
-                        const width = Math.max(
-                          minWidth,
-                          Math.min(el.value.length * charWidth, maxWidth)
-                        );
-                        el.style.width = width + 'px';
-                      }
-                    }}
-                    style={{
-                      border: "none",
-                      resize: "none",
-                      overflow: "hidden",
-                      minWidth: 600,
-                      minHeight: 30,
-                      maxWidth: 320,
-                    }}
+              if (el) {
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+                const charWidth = 8;
+                const minWidth = 360;
+                const maxWidth = 600;
+                const width = Math.max(
+                  minWidth,
+                  Math.min(el.value.length * charWidth, maxWidth)
+                );
+                el.style.width = width + 'px';
+              }
+            }}
+            style={{
+              border: "none",
+              resize: "none",
+              overflow: "hidden",
+              minWidth: 240,
+              minHeight: 30,
+              maxWidth: 600,
+            }}
           />
           <div className={styles.summary}>
             <div>
@@ -677,35 +733,42 @@ export default function InvoiceForm({
           value={legalNote}
           onChange={(e) => setLegalNote(e.target.value)}
           ref={el => {
-                      // Fonction de resize largeur et hauteur
-                      if (el) {
-                        el.style.height = 'auto';
-                        el.style.height = el.scrollHeight + 'px';
-
-                        // Largeur auto (simple, pas parfait mais "OK" pour un effet de base)
-                        // On prend le nombre de caractères x une largeur moyenne
-                        const charWidth = 8; // px, ajuste si tu veux
-                        const minWidth = 600; // px
-                        const maxWidth = 900; // px
-                        const width = Math.max(
-                          minWidth,
-                          Math.min(el.value.length * charWidth, maxWidth)
-                        );
-                        el.style.width = width + 'px';
-                      }
-                    }}
-                    style={{
-                      border: "none",
-                      resize: "none",
-                      overflow: "hidden",
-                      minWidth: 600,
-                      minHeight: 30,
-                      maxWidth: 900,
-                    }}
+            if (el) {
+              el.style.height = 'auto';
+              el.style.height = el.scrollHeight + 'px';
+              const charWidth = 8;
+              const minWidth = 600;
+              const maxWidth = 900;
+              const width = Math.max(
+                minWidth,
+                Math.min(el.value.length * charWidth, maxWidth)
+              );
+              el.style.width = width + 'px';
+            }
+          }}
+          style={{
+            border: "none",
+            resize: "none",
+            overflow: "hidden",
+            minWidth: 600,
+            minHeight: 30,
+            maxWidth: 900,
+          }}
         />
 
-        <button type="submit" className={styles.submit}>
-          Générer la facture
+        <button
+          type="submit"
+          className={styles.submit}
+          disabled={loading}
+        >
+          {loading ? (
+            // Met un spinner si tu veux, sinon juste un texte :
+            <span>
+              <span className={styles.spinner} /> Génération...
+            </span>
+          ) : (
+            "Générer la facture"
+          )}
         </button>
       </form>
 
@@ -741,49 +804,7 @@ export default function InvoiceForm({
           totalTTC={totalTTC}
         />
       </div>
-      {/* ---- PREVIEW PDF VISIBLE ---- */}
-<h2 style={{ margin: "40px 0 8px 0", fontWeight: 700, fontSize: 18 }}>
-  Aperçu PDF (identique à ce qui sera généré)
-</h2>
-<div style={{
-  border: "1px solid #c2c2c2",
-  borderRadius: 8,
-  padding: 24,
-  background: "#fafbfc",
-  marginBottom: 40,
-  minHeight: 600,
-}}>
-  <InvoicePreview
-    issuer={{
-      ...issuer,
-      vat: issuerTva,
-      phone: issuerPhone,
-      extra: issuerExtra,
-    }}
-    client={{
-      ...client,
-      phone: clientPhone,
-      extra: clientExtra,
-    }}
-    items={items.map((it, i) => ({
-      ...it,
-      vatRate: settings.enableVAT
-        ? settings.vatPerLine
-          ? lineVats[i]
-          : settings.vatRate
-        : 0,
-    }))}
-    date={date}
-    invoiceTitle={invoiceTitle}
-    settings={settings}
-    paymentInfo={paymentInfo}
-    legalNote={legalNote}
-    totalHT={totalHT}
-    totalVAT={totalVAT}
-    totalTTC={totalTTC}
-  />
-</div>
-
+      {/* Aperçu PDF supprimé comme demandé */}
     </>
   );
 }

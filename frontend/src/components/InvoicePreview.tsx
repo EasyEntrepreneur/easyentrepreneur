@@ -132,7 +132,6 @@ export default function InvoicePreview({
   padding: 0.6rem;
 }
 .dateLabel {
-  background:rgba(107, 141, 252, 0.92);
   padding: 0.75rem;
   font-weight: 600;
   text-align: center;
@@ -147,7 +146,6 @@ export default function InvoicePreview({
   font-size: 1.01rem;
 }
 .table th {
-  background:rgba(107, 141, 252, 0.92);
   border: 1px solid #ddd;
   padding: 0.75rem;
   font-weight: 600;

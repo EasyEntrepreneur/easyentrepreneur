@@ -53,7 +53,6 @@ function generateInvoiceHtml(invoice: any) {
           h1 { color: #444; }
           table { width: 100%; border-collapse: collapse; margin-top: 24px;}
           th, td { border: 1px solid #aaa; padding: 8px; }
-          th { background: #eee; }
           .right { text-align: right; }
         </style>
       </head>

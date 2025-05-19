@@ -1,7 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styles from './factures.module.css'
+import toast from "react-hot-toast";
+
+// --------- Hook d’affichage du toast de succès après redirection ----------
+function useEffectToastOnRedirect() {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const toastData = sessionStorage.getItem("showInvoiceToast");
+      if (toastData) {
+        const { id } = JSON.parse(toastData);
+        toast.success(
+          <span>
+            Facture générée avec succès&nbsp;
+            <a
+              href={id ? `/dashboard/factures/${id}` : "#"}
+              style={{ color: "#3b82f6", textDecoration: "underline" }}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              [Afficher la facture]
+            </a>
+          </span>,
+          { duration: 5000 }
+        );
+        sessionStorage.removeItem("showInvoiceToast");
+      }
+    }
+  }, []);
+}
 
 type Facture = {
   id: string
@@ -20,6 +48,8 @@ const mockFactures: Facture[] = [
 ]
 
 export default function FacturesPage() {
+  useEffectToastOnRedirect() // <-- Ici c'est bon !
+
   const [search, setSearch] = useState('')
   const [filtreStatut, setFiltreStatut] = useState<'Tous' | 'Payée' | 'En attente' | 'Échouée'>('Tous')
 

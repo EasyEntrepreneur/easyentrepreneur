@@ -104,9 +104,6 @@ export const SettingsPanel: FC<Props> = ({
           ))}
         </select>
       </div>
-      <div className={styles.field}>
-        <button onClick={onLoadIssuer}>Charger émetteur</button>
-      </div>
 
       {/* --- CLIENT --- */}
       <div className={styles.field}>
@@ -122,9 +119,6 @@ export const SettingsPanel: FC<Props> = ({
             </option>
           ))}
         </select>
-      </div>
-      <div className={styles.field}>
-        <button onClick={onLoadClient}>Charger client</button>
       </div>
     </aside>
   );
