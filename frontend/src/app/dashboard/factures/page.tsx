@@ -14,31 +14,56 @@ type Facture = {
   statut: 'Payée' | 'En attente' | 'Échouée'
 }
 
+// Fonction utilitaire pour ouvrir le PDF AVEC token (auth)
+const handleShowPdf = async (number: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    toast.error("Veuillez vous reconnecter");
+    return;
+  }
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/number/${number}/pdf`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error("Erreur lors du téléchargement du PDF");
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  } catch (e) {
+    toast.error("Impossible d'ouvrir le PDF");
+  }
+}
+
+
 // --------- Hook d’affichage du toast de succès après redirection ----------
 function useEffectToastOnRedirect() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const toastData = sessionStorage.getItem("showInvoiceToast");
       if (toastData) {
-        const { pdfUrl } = JSON.parse(toastData);
-        if (pdfUrl) {
-          toast.success(
-            <span>
-              Facture générée avec succès&nbsp;
-              <a
-                href={`${process.env.NEXT_PUBLIC_API_URL}${pdfUrl}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#3b82f6", textDecoration: "underline" }}
-              >
-                Afficher
-              </a>
-            </span>,
-            { duration: 5000 }
-          );
-        } else {
-          toast.success("Facture générée avec succès !");
-        }
+        const { number } = JSON.parse(toastData);
+        toast.success(
+          <span>
+            Facture générée avec succès&nbsp;
+            <button
+              onClick={() => handleShowPdf(number)}
+              style={{
+                color: "#3b82f6",
+                textDecoration: "underline",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                font: "inherit",
+              }}
+            >
+              Afficher
+            </button>
+          </span>,
+          { duration: 7000 }
+        );
         sessionStorage.removeItem("showInvoiceToast");
       }
     }
@@ -177,16 +202,18 @@ export default function FacturesPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      {facture.pdfUrl && (
-                        <a
-                          href={`${process.env.NEXT_PUBLIC_API_URL}${facture.pdfUrl}`}
-                          title="Afficher la facture PDF"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          📄
-                        </a>
-                      )}
+                      <button
+                        onClick={() => handleShowPdf(facture.number)}
+                        title="Afficher la facture PDF"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "1.2em"
+                        }}
+                      >
+                        📄
+                      </button>
                       <button title="Envoyer par mail">📧</button>
                     </div>
                   </td>

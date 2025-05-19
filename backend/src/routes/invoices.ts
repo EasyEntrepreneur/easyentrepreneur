@@ -228,7 +228,8 @@ router.post('/', authenticateToken, async (req, res) => {
     const pdfFilename = `${newInvoice.number}.pdf`
     const pdfPath = path.join(pdfDir, pdfFilename)
     await fs.writeFile(pdfPath, pdfBuffer)
-
+    const pdfUrl = `/invoices/${newInvoice.number}.pdf`;
+    
     // Met à jour la facture avec juste le NOM DU FICHIER PDF (pas le chemin complet !)
     newInvoice = await prisma.invoice.update({
       where: { id: newInvoice.id },
@@ -239,7 +240,7 @@ router.post('/', authenticateToken, async (req, res) => {
     // Retourne la facture + l’URL web du PDF
     res.status(201).json({
       ...newInvoice,
-      pdfUrl: `/invoices/${pdfFilename}`
+      pdfUrl: `/invoices/${newInvoice.number}.pdf`
     })
   } catch (error) {
     console.error('Erreur POST /invoices :', error)
@@ -247,24 +248,25 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /invoices/:id/pdf — Télécharge le PDF (toujours sécurisé)
+// GET /invoices/number/:number/pdf — Télécharge le PDF par numéro (ex: 2024-043)
 router.get('/:id/pdf', authenticateToken, async (req, res) => {
   const userId = req.user.userId
-  const invoiceId = req.params.id
+  const invoiceNumber = req.params.id // c'est bien le NUMERO de facture ici (ex: 2024-045)
 
+  // Cherche la facture par number et userId
   const invoice = await prisma.invoice.findFirst({
-    where: { id: invoiceId, userId }
+    where: { number: invoiceNumber, userId }
   })
 
   if (!invoice || !invoice.pdfPath) {
     return res.status(404).json({ error: "PDF non trouvé" })
   }
 
-  // Le nom du fichier PDF est stocké dans pdfPath
   const pdfFilePath = path.join(__dirname, "../../invoices_pdf", invoice.pdfPath)
   res.setHeader("Content-Type", "application/pdf")
   res.setHeader("Content-Disposition", `inline; filename="Facture-${invoice.number}.pdf"`)
   res.sendFile(path.resolve(pdfFilePath))
 })
+
 
 export default router

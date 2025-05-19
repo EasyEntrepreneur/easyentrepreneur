@@ -299,18 +299,20 @@ export default function InvoiceForm({
       try {
         const data = await res.json();
         factureId = data?.id || data?.invoiceId || null;
+        pdfUrl = data?.pdfUrl || null;
         factureNumber = data?.number || null;
       } catch {}
 
       // Stocke le number pour le toast de la page /dashboard/factures
+      // Après POST /invoices dans InvoiceForm.tsx
       sessionStorage.setItem(
         "showInvoiceToast",
         JSON.stringify({
-          id: factureId,
-          number: factureNumber, // ← le number sera utilisé côté /dashboard/factures pour matcher
-          pdfUrl: pdfUrl
+          number: factureNumber,
+          pdfUrl: `/dashboard/factures/${factureNumber}/pdf` // <-- Lien local front (proxy page ou handler direct)
         })
       );
+
 
       // Rediriger vers la liste des factures
       router.push("/dashboard/factures");
