@@ -17,7 +17,7 @@ router.get('/', authenticateToken, async (req, res) => {
       orderBy: { issuedAt: 'desc' },
     })
     // Ajoute le champ pdfUrl pour chaque facture (utilisé côté front)
-    const invoicesWithPdfUrl = invoices.map(inv => ({
+    const invoicesWithPdfUrl = invoices.map((inv: { number: any }) => ({
       ...inv,
       pdfUrl: inv.number ? `/invoices/${inv.number}.pdf` : null
     }))
@@ -119,7 +119,7 @@ router.post('/', authenticateToken, async (req, res) => {
     iban,
     bic,
     items,
-    invoiceHtml, // <-- HTML côté front à utiliser pour le PDF
+    invoiceHtml,
     ...rest
   } = req.body
 
@@ -196,6 +196,7 @@ router.post('/', authenticateToken, async (req, res) => {
       data: {
         number,
         userId,
+        statut: "EN_ATTENTE", // ← ENUM ici !
         clientId: dbClient.id,
         clientName: client.name,
         clientAddress: client.address,
@@ -248,6 +249,28 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 })
 
+// PATCH /invoices/:id/statut — Changer le statut de la facture
+router.patch('/:id/statut', authenticateToken, async (req, res) => {
+  const userId = req.user.userId
+  const invoiceId = req.params.id
+  const { statut } = req.body
+  // On ne valide QUE les valeurs enum
+  const allowedStatuts = ["PAYEE", "EN_ATTENTE", "ANNULE"];
+  if (!allowedStatuts.includes(statut)) {
+    return res.status(400).json({ error: "Statut invalide" })
+  }
+  try {
+    const invoice = await prisma.invoice.update({
+      where: { id: invoiceId, userId },
+      data: { statut },
+    })
+    if (!invoice) return res.status(404).json({ error: "Facture introuvable" })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: "Erreur serveur" })
+  }
+})
+
 // GET /invoices/number/:number/pdf — Télécharge le PDF par numéro (ex: 2024-043)
 router.get('/:id/pdf', authenticateToken, async (req, res) => {
   const userId = req.user.userId
@@ -267,6 +290,5 @@ router.get('/:id/pdf', authenticateToken, async (req, res) => {
   res.setHeader("Content-Disposition", `inline; filename="Facture-${invoice.number}.pdf"`)
   res.sendFile(path.resolve(pdfFilePath))
 })
-
 
 export default router

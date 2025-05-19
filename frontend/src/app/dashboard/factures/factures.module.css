@@ -67,6 +67,7 @@
   border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 0.9rem;
+  background: #FFFFFF;  
 }
 
 .tableContainer {
@@ -106,7 +107,7 @@
   color: #856404;
 }
 
-.statusEchouee {
+.statusAnnule {
   background: #f8d7da;
   color: #721c24;
 }

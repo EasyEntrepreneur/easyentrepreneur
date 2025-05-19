@@ -127,7 +127,7 @@ model Invoice {
   clientId   String?
   client     Client? @relation(fields: [clientId], references: [id])
 
-  status   InvoiceStatus @default(PENDING)
+  statut   InvoiceStatus @default(EN_ATTENTE)
   issuedAt DateTime      @default(now())
   dueAt    DateTime?
   paidAt   DateTime?
@@ -162,10 +162,9 @@ model InvoiceItem {
 }
 
 enum InvoiceStatus {
-  PAID
-  PENDING
-  FAILED
-  CANCELED
+  PAYEE      @map("Payée")
+  EN_ATTENTE @map("En attente")
+  ANNULE     @map("Annulée")
 }
 
 
