@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import styles from './factures.module.css'
 import toast from "react-hot-toast"
+import RevenueChart from '@/components/RevenueChart';
 
 // Mapping entre enum (backend) et labels (frontend)
 const STATUT_LABELS: Record<InvoiceStatus, string> = {
@@ -220,6 +221,9 @@ export default function FacturesPage() {
         </div>
       </div>
 
+      <h2 className="text-xl font-semibold">Evolution du chiffre d'affaire</h2>
+      <RevenueChart invoices={factures} />
+
       <div className={styles.filtersBar}>
         <h2 className="text-xl font-semibold">Mes factures générées</h2>
         <div className={styles.filters}>
@@ -242,7 +246,7 @@ export default function FacturesPage() {
           />
         </div>
       </div>
-
+      
       <div className={styles.tableContainer}>
         <table className={styles.table}>
           <thead>
