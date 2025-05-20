@@ -1,10 +1,10 @@
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
-import PourquoiSection from '@/components/PourquoiSection';
 import Footer from '@/components/Footer';
 import FeatureSection from '@/components/FeatureSection';
 import FaqSection from '@/components/FaqSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
+import OffersSection from '@/components/Offers';
 
 
 export default function Home() {
@@ -13,7 +13,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <FeatureSection />
-      <PourquoiSection />
+      <OffersSection />
       <FaqSection />
       <TestimonialsSection />
       <Footer />

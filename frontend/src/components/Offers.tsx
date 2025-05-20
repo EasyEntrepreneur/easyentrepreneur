@@ -1,6 +1,6 @@
 'use client';
 
-import styles from './PourquoiSection.module.css';
+import styles from './Offers.module.css';
 import { useRouter } from 'next/navigation';
 
 const offres = [
@@ -52,7 +52,7 @@ const offres = [
   }
 ];
 
-export default function PourquoiSection() {
+export default function OffersSection() {
   const router = useRouter();
 
   const handleChoosePlan = (plan: string, priceId: string) => {

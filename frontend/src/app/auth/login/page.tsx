@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import HeaderAuth from '@/components/HeaderAuth';
 import styles from './page.module.css';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,6 +21,7 @@ export default function LoginPage() {
     if (!process.env.NEXT_PUBLIC_API_URL) {
       console.error("❌ L'URL de l’API n’est pas définie !");
       setError("Problème de configuration.");
+      toast.error("Problème de configuration serveur.");
       setLoading(false);
       return;
     }
@@ -38,24 +40,29 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data.message || 'Email ou mot de passe invalide.');
-        alert(data.message || 'Email ou mot de passe invalide.');
+        toast.error(data.message || 'Email ou mot de passe invalide.');
+        setLoading(false);
         return;
       }
 
       if (data.token) {
         localStorage.setItem('token', data.token);
-        window.location.href = '/dashboard';
+        toast.success('Connexion réussie ! Redirection...');
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 700); // petit délai pour voir le toast
       } else {
         setError("Réponse inattendue du serveur.");
+        toast.error("Réponse inattendue du serveur.");
       }
     } catch (err) {
       console.error('❌ Erreur serveur :', err);
       setError('Erreur serveur. Veuillez réessayer.');
+      toast.error('Erreur serveur. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <>
@@ -94,7 +101,8 @@ export default function LoginPage() {
               </div>
             </label>
 
-            {error && <p className={styles.error}>{error}</p>}
+            {/* On peut garder l'affichage du message d'erreur sous le formulaire si tu veux */}
+            {/* {error && <p className={styles.error}>{error}</p>} */}
 
             <button type="submit" className={styles.submit} disabled={loading}>
               {loading ? 'Connexion...' : 'Se connecter'}

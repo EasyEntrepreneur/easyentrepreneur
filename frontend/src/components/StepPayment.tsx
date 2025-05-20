@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import styles from './StepPayment.module.css';
 import AddCardForm from './AddCardForm';
 import { usePaymentMethods } from '../hooks/usePaymentMethods';
+import toast from 'react-hot-toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -38,15 +39,29 @@ export default function StepPayment({
   // Récupération du client Stripe
   useEffect(() => {
     const fetchCustomer = async () => {
-      const userRes = await fetch(`${API_URL}/get-customer-id?userId=${userId}`);
-      const userData = await userRes.json();
-      const customerId = userData?.stripeCustomerId;
-      setStripeCustomerId(customerId);
-      onCustomerIdRetrieved(customerId);
+      try {
+        const userRes = await fetch(`${API_URL}/get-customer-id?userId=${userId}`);
+        if (!userRes.ok) {
+          const err = await userRes.json();
+          toast.error(err.message || "Erreur lors de la récupération du client Stripe.");
+          return;
+        }
+        const userData = await userRes.json();
+        const customerId = userData?.stripeCustomerId;
+        if (!customerId) {
+          toast.error("Aucun identifiant client Stripe trouvé.");
+          return;
+        }
+        setStripeCustomerId(customerId);
+        onCustomerIdRetrieved(customerId);
+      } catch (error) {
+        toast.error("Erreur réseau lors de la récupération du client Stripe.");
+        console.error(error);
+      }
     };
 
     fetchCustomer();
-  }, [userId]);
+  }, [userId, onCustomerIdRetrieved]);
 
   // Création du SetupIntent pour ajouter une carte
   useEffect(() => {
@@ -60,10 +75,21 @@ export default function StepPayment({
           body: JSON.stringify({ customerId: stripeCustomerId, userId }),
         });
 
+        if (!res.ok) {
+          const err = await res.json();
+          toast.error(err.message || "Erreur lors de la création du SetupIntent Stripe.");
+          return;
+        }
+
         const data = await res.json();
+        if (!data.clientSecret) {
+          toast.error("Impossible de récupérer le clientSecret pour Stripe.");
+          return;
+        }
         setClientSecret(data.clientSecret);
         console.log('✅ SetupIntent clientSecret :', data.clientSecret);
       } catch (err) {
+        toast.error('Erreur réseau lors de la création du SetupIntent');
         console.error('Erreur lors de la création du SetupIntent', err);
       }
     };
@@ -78,6 +104,7 @@ export default function StepPayment({
   }, [selectedMethod, onPaymentMethodSelected]);
 
   const handleCardSaved = async (newPaymentMethodId: string) => {
+    toast.success('Carte enregistrée avec succès !');
     await refetch();
     setSelectedMethod(newPaymentMethodId);
     onPaymentMethodSelected(newPaymentMethodId);

@@ -67,7 +67,7 @@ app.use('/api', confirmEmailRoute);
 app.use('/api', updateUserInfoRoutes);
 
 app.use('/api/invoices', invoicesRoute)
-app.use("/api/issuer", issuerRouter);
+app.use('/api/issuer', issuerRouter);
 app.use("/api/client", clientRouter);
 
 app.use('/invoices', express.static(path.join(__dirname, 'invoices_pdf')));

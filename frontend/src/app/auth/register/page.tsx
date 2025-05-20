@@ -4,6 +4,7 @@ import { useState } from 'react';
 import HeaderAuth from '@/components/HeaderAuth';
 import styles from './page.module.css';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -19,6 +20,12 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMessage('');
 
+    if (!API_URL) {
+      toast.error("Problème de configuration serveur.");
+      setErrorMessage("Problème de configuration serveur.");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
@@ -29,13 +36,18 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (res.ok) {
-        window.location.href = '/auth/login';
+        toast.success("Inscription réussie ! Redirection...");
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 1200);
       } else {
         setErrorMessage(data?.error || "Erreur lors de l'inscription");
+        toast.error(data?.error || "Erreur lors de l'inscription");
       }
     } catch (err) {
       console.error('Erreur réseau :', err);
       setErrorMessage("Erreur de connexion au serveur. Veuillez réessayer.");
+      toast.error("Erreur de connexion au serveur. Veuillez réessayer.");
     }
   };
 
@@ -99,13 +111,6 @@ export default function RegisterPage() {
                 </button>
               </div>
             </label>
-
-            {errorMessage && (
-              <p style={{ color: 'red', fontSize: '0.875rem', marginTop: '8px' }}>
-                {errorMessage}
-              </p>
-            )}
-
             <button type="submit" className={styles.submit}>S'inscrire</button>
             <p className={styles.footerText}>
               Déjà un compte ? <a href="/auth/login">Se connecter</a>

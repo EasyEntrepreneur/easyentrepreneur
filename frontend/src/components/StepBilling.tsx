@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import styles from './StepBilling.module.css';
+import toast from "react-hot-toast";
 
 interface StepBillingProps {
   onSuccess: () => void;
   onEdit: () => void;
-  userId: string; // ✅ ajouté ici
+  userId: string;
 }
 
 export default function StepBilling({ onSuccess, onEdit, userId }: StepBillingProps) {
@@ -30,12 +31,19 @@ export default function StepBilling({ onSuccess, onEdit, userId }: StepBillingPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error("Vous n'êtes pas connecté. Merci de vous reconnecter.");
+      return;
+    }
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/billing`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -45,12 +53,13 @@ export default function StepBilling({ onSuccess, onEdit, userId }: StepBillingPr
 
       if (data.success) {
         setIsSubmitted(true);
+        toast.success("Informations enregistrées !");
         onSuccess();
       } else {
-        alert("Erreur lors de l'enregistrement");
+        toast.error(data?.message || "Erreur lors de l'enregistrement");
       }
     } catch (err) {
-      alert("Erreur réseau ou serveur");
+      toast.error("Erreur réseau ou serveur");
       console.error(err);
     }
   };
@@ -118,7 +127,6 @@ export default function StepBilling({ onSuccess, onEdit, userId }: StepBillingPr
           <input type="text" name="vat" value={formData.vat} onChange={handleChange} />
         </div>
       </div>
-
       <button type="submit" className={styles.submitButton}>
         Enregistrer les informations
       </button>
