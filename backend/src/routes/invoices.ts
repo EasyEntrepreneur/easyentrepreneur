@@ -110,7 +110,6 @@ function generateInvoiceHtml(invoice: any) {
   `
 }
 
-// POST /invoices — création d’une facture et génération PDF
 router.post('/', authenticateToken, async (req, res) => {
   const userId = req.user.userId
   const {
@@ -124,7 +123,7 @@ router.post('/', authenticateToken, async (req, res) => {
   } = req.body
 
   try {
-    // 1. Récupère ou crée le client
+    // 1. Récupère ou crée le client (inchangé)
     let dbClient = null
     if (client.siret) {
       dbClient = await prisma.client.findFirst({
@@ -156,20 +155,50 @@ router.post('/', authenticateToken, async (req, res) => {
       dbClient = await prisma.client.create({ data: clientToInsert })
     }
 
-    // Générer un numéro de facture
-    const lastInvoice = await prisma.invoice.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    })
+    // 2. Génération d'un numéro de facture unique **robuste**
+    const year = new Date().getFullYear();
+    const regex = new RegExp(`^${year}-(\\d{3})$`);
 
-    let nextNumber = 1
-    if (lastInvoice?.number) {
-      const match = lastInvoice.number.match(/(\d+)$/)
-      if (match) nextNumber = parseInt(match[1]) + 1
+    // Cherche tous les numéros pour l'année en cours
+    const invoicesThisYear = await prisma.invoice.findMany({
+      where: {
+        userId,
+        number: { startsWith: `${year}-` }
+      },
+      select: { number: true }
+    });
+
+    // Trouve le plus grand numéro de la série
+    let nextNumber = 1;
+    if (invoicesThisYear.length > 0) {
+      const nums = invoicesThisYear
+        .map(inv => {
+          const match = inv.number.match(regex);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n));
+      if (nums.length > 0) {
+        nextNumber = Math.max(...nums) + 1;
+      }
     }
-    const number = `2024-${String(nextNumber).padStart(3, '0')}`
+    let number = `${year}-${String(nextNumber).padStart(3, '0')}`;
 
-    // Calcul des totaux
+    // Vérifie l'unicité (boucle ultra-rare)
+    let exists = await prisma.invoice.findUnique({ where: { number } });
+    let tries = 0;
+    const maxTries = 10;
+    while (exists && tries < maxTries) {
+      nextNumber++;
+      number = `${year}-${String(nextNumber).padStart(3, '0')}`;
+      exists = await prisma.invoice.findUnique({ where: { number } });
+      if (!exists) break;
+      tries++;
+    }
+    if (tries === maxTries && exists) {
+      return res.status(500).json({ error: "Impossible de générer un numéro de facture unique. Veuillez réessayer." });
+    }
+
+    // 3. Calcul des totaux (inchangé)
     let totalHT = 0
     let totalTVA = 0
     let totalTTC = 0
@@ -191,12 +220,12 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     })
 
-    // Création en base
+    // 4. Création en base (inchangé sauf number utilisé)
     let newInvoice = await prisma.invoice.create({
       data: {
         number,
         userId,
-        statut: "EN_ATTENTE", // ← ENUM ici !
+        statut: "EN_ATTENTE",
         clientId: dbClient.id,
         clientName: client.name,
         clientAddress: client.address,
@@ -215,7 +244,7 @@ router.post('/', authenticateToken, async (req, res) => {
       include: { items: true, client: true },
     })
 
-    // Génération du PDF avec le HTML reçu du front (ou fallback)
+    // 5. Génération du PDF (inchangé)
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
     const browser = await puppeteer.launch({ headless: true })
     const page = await browser.newPage()
@@ -223,22 +252,20 @@ router.post('/', authenticateToken, async (req, res) => {
     const pdfBuffer = await page.pdf({ format: "A4" })
     await browser.close()
 
-    // Sauvegarde le PDF dans /invoices_pdf/
     const pdfDir = path.join(__dirname, "../../invoices_pdf")
     await fs.mkdir(pdfDir, { recursive: true })
     const pdfFilename = `${newInvoice.number}.pdf`
     const pdfPath = path.join(pdfDir, pdfFilename)
     await fs.writeFile(pdfPath, pdfBuffer)
-    const pdfUrl = `/invoices/${newInvoice.number}.pdf`;
+    const pdfUrl = `/invoices/${newInvoice.number}.pdf`
     
-    // Met à jour la facture avec juste le NOM DU FICHIER PDF (pas le chemin complet !)
+    // Met à jour la facture avec le PDF
     newInvoice = await prisma.invoice.update({
       where: { id: newInvoice.id },
-      data: { pdfPath: pdfFilename }, // <-- Juste le nom, ex: 2024-031.pdf
+      data: { pdfPath: pdfFilename },
       include: { items: true, client: true },
     })
 
-    // Retourne la facture + l’URL web du PDF
     res.status(201).json({
       ...newInvoice,
       pdfUrl: `/invoices/${newInvoice.number}.pdf`
