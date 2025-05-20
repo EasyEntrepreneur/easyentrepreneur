@@ -13,6 +13,11 @@ const links = [
   { label: "Paramètres de compte", href: "/dashboard/parametres" },
 ];
 
+const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/auth/login';
+  };
+
 export default function UserSidebar() {
   const pathname = usePathname();
 
@@ -29,9 +34,9 @@ export default function UserSidebar() {
             {link.label}
           </Link>
         ))}
-        <form action="/api/auth/signout" method="POST">
-          <button className={styles.navItem}>Se déconnecter</button>
-        </form>
+        <button onClick={handleLogout} className={styles.navItem}>
+          Se déconnecter
+        </button>
       </nav>
     </aside>
   );
