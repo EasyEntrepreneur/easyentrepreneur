@@ -1,4 +1,3 @@
-// File: Parametres.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -8,17 +7,15 @@ export default function Parametres() {
   const [activeTab, setActiveTab] = useState<'personnel' | 'facturation' | 'entreprise'>('personnel')
   const [user, setUser] = useState<any>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  // États pour activer/désactiver la modification de chaque champ
-  const [editingEmail, setEditingEmail] = useState(false)
-  const [editingPassword, setEditingPassword] = useState(false)
-
   useEffect(() => {
     if (message) {
-      const timeout = setTimeout(() => setMessage(null), 3500)
+      const timeout = setTimeout(() => {
+        setMessage(null)
+      }, 3500)
       return () => clearTimeout(timeout)
     }
   }, [message])
+
 
   const [form, setForm] = useState({
     name: '',
@@ -45,15 +42,18 @@ export default function Parametres() {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token) return void (window.location.href = '/auth/login')
+    if (!token) {
+      window.location.href = '/auth/login'
+      return
+    }
 
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(async res => {
+      .then(async (res) => {
         if (!res.ok) throw new Error()
-        const { user } = await res.json()
-        setUser(user)
+        const data = await res.json()
+        setUser(data.user)
       })
       .catch(() => {
         localStorage.removeItem('token')
@@ -63,7 +63,7 @@ export default function Parametres() {
 
   useEffect(() => {
     if (user) {
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
         name: user.name || '',
         lastname: user.lastname || '',
@@ -72,8 +72,9 @@ export default function Parametres() {
     }
   }, [user])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,7 +87,6 @@ export default function Parametres() {
         Authorization: `Bearer ${token}`,
       }
 
-      // 1) update-user
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-user`, {
         method: 'PUT',
         headers,
@@ -98,7 +98,6 @@ export default function Parametres() {
         }),
       })
 
-      // 2) update-billing
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-billing`, {
         method: 'PUT',
         headers,
@@ -115,7 +114,6 @@ export default function Parametres() {
         }),
       })
 
-      // 3) update-company
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-company`, {
         method: 'PUT',
         headers,
@@ -131,9 +129,6 @@ export default function Parametres() {
       })
 
       setMessage({ type: 'success', text: 'Modifications enregistrées ✅' })
-      // repasser en lecture seule
-      setEditingEmail(false)
-      setEditingPassword(false)
     } catch (err) {
       console.error('Erreur mise à jour :', err)
       setMessage({ type: 'error', text: "Erreur lors de l'enregistrement." })
@@ -150,95 +145,55 @@ export default function Parametres() {
         )}
 
         <div className={styles.tabHeader}>
-          <button
-            type="button"
-            onClick={() => setActiveTab('personnel')}
-            className={activeTab === 'personnel' ? styles.active : ''}
-          >
+          <button type="button" onClick={() => setActiveTab('personnel')} className={activeTab === 'personnel' ? styles.active : ''}>
             Informations personnelles
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('facturation')}
-            className={activeTab === 'facturation' ? styles.active : ''}
-          >
+          <button type="button" onClick={() => setActiveTab('facturation')} className={activeTab === 'facturation' ? styles.active : ''}>
             Informations de facturation
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('entreprise')}
-            className={activeTab === 'entreprise' ? styles.active : ''}
-          >
+          <button type="button" onClick={() => setActiveTab('entreprise')} className={activeTab === 'entreprise' ? styles.active : ''}>
             Informations de votre entreprise
           </button>
         </div>
 
         {activeTab === 'personnel' && (
           <div className={styles.section}>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Prénom"
-            />
-            <input
-              name="lastname"
-              value={form.lastname}
-              onChange={handleChange}
-              placeholder="Nom"
-            />
-
-            {/* Champ Email + bouton dédié */}
-            <div className={styles.inlineGroup}>
-              <input
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                type="email"
-                placeholder="Email"
-                readOnly={!editingEmail}
-                className={editingEmail ? '' : styles.readOnly}
-              />
-              <button
-                type="button"
-                className={styles.editBtn}
-                onClick={() => setEditingEmail(prev => !prev)}
-              >
-                {editingEmail ? 'Annuler' : 'Modifier'}
-              </button>
-            </div>
-
-            {/* Champ Mot de passe + bouton dédié */}
-            <div className={styles.inlineGroup}>
-              <input
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                type="password"
-                placeholder="*****************"
-                readOnly={!editingPassword}
-                className={editingPassword ? '' : styles.readOnly}
-              />
-              <button
-                type="button"
-                className={styles.editBtn}
-                onClick={() => setEditingPassword(prev => !prev)}
-              >
-                {editingPassword ? 'Annuler' : 'Modifier'}
-              </button>
-            </div>
+            <input name="name" value={form.name} onChange={handleChange} placeholder="Prénom" />
+            <input name="lastname" value={form.lastname} onChange={handleChange} placeholder="Nom" />
+            <input name="email" value={form.email} onChange={handleChange} type="email" placeholder="Email" />
+            <input name="password" value={form.password} onChange={handleChange} type="password" placeholder="Mot de passe (laisser vide si inchangé)" />
           </div>
         )}
 
         {activeTab === 'facturation' && (
           <div className={styles.section}>
-            {/* ... votre code facturation inchangé ... */}
+            <div className={styles.inlineGroup}>
+              <input name="billingName" value={form.billingName} onChange={handleChange} placeholder="Prénom" />
+              <input name="billingLastname" value={form.billingLastname} onChange={handleChange} placeholder="Nom" />
+            </div>
+            <input name="billingEmail" value={form.billingEmail} onChange={handleChange} placeholder="Email" />
+            <input name="billingCountry" value={form.billingCountry} onChange={handleChange} placeholder="Pays" />
+            <input name="billingAddress" value={form.billingAddress} onChange={handleChange} placeholder="Adresse" />
+            <div className={styles.inlineGroup}>
+              <input name="billingZip" value={form.billingZip} onChange={handleChange} placeholder="Code postal" />
+              <input name="billingCity" value={form.billingCity} onChange={handleChange} placeholder="Ville" />
+            </div>
+            <input name="billingCompany" value={form.billingCompany} onChange={handleChange} placeholder="Entreprise" />
+            <input name="billingVat" value={form.billingVat} onChange={handleChange} placeholder="Numéro de TVA" />
           </div>
         )}
 
         {activeTab === 'entreprise' && (
           <div className={styles.section}>
-            {/* ... votre code entreprise inchangé ... */}
+            <input name="companyName" value={form.companyName} onChange={handleChange} placeholder="Nom / Société" />
+            <input name="companyAddress" value={form.companyAddress} onChange={handleChange} placeholder="Adresse" />
+            <div className={styles.inlineGroup}>
+              <input name="companyZip" value={form.companyZip} onChange={handleChange} placeholder="Code postal" />
+              <input name="companyCity" value={form.companyCity} onChange={handleChange} placeholder="Ville" />
+            </div>
+            <input name="companySiret" value={form.companySiret} onChange={handleChange} placeholder="SIRET" />
+            <input name="companyVat" value={form.companyVat} onChange={handleChange} placeholder="Numéro TVA" />
+            <input name="companyPhone" value={form.companyPhone} onChange={handleChange} placeholder="Téléphone" />
           </div>
         )}
 
