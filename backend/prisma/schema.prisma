@@ -25,9 +25,9 @@ model User {
   currentPlan        Plan            @default(FREEMIUM)
   paymentMethods     PaymentMethod[]
   documents          Document[]
-  billings           BillingInfo[]  
+  billingInfo        BillingInfo? 
   usages             Usage[] // Relation vers les usages
-  companyInfo        CompanyInfo[] // Relation vers l'entreprise
+  companyInfo        CompanyInfo? // Relation vers l'entreprise
   invoices           Invoice[] // 🔁 Relation inverse des factures
   client             Client[]
 }
