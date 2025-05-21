@@ -5,7 +5,6 @@ import styles from './factures.module.css'
 import toast from "react-hot-toast"
 import RevenueChart from '@/components/RevenueChart';
 
-// Mapping entre enum (backend) et labels (frontend)
 const STATUT_LABELS: Record<InvoiceStatus, string> = {
   PAYEE: 'Payée',
   EN_ATTENTE: 'En attente',
@@ -20,8 +19,15 @@ type Facture = {
   issuedAt: string
   totalTTC: number
   pdfUrl: string
-  statut: InvoiceStatus // ATTENTION : utilise bien l'enum, plus les labels
+  statut: InvoiceStatus
 }
+
+// QUOTA TYPES
+type QuotaInfo = {
+  used: number
+  max: number
+  offer: string // "FREEMIUM" | ...
+};
 
 const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'PAYEE', label: 'Payée' },
@@ -63,7 +69,6 @@ const handleShowPdf = async (number: string) => {
     return;
   }
   try {
-    // ⚠️ Il faut utiliser le endpoint correct !
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${number}/pdf`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -73,13 +78,11 @@ const handleShowPdf = async (number: string) => {
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     window.open(url, "_blank");
-    // Optionnel : révoquer l'URL après quelques secondes
     setTimeout(() => window.URL.revokeObjectURL(url), 5000);
   } catch (e) {
     toast.error("Impossible d'ouvrir le PDF");
   }
 };
-
 
 function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
   useEffect(() => {
@@ -124,6 +127,30 @@ export default function FacturesPage() {
   const [loading, setLoading] = useState(true);
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
 
+  // QUOTA STATES
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
+  useEffect(() => {
+    // Récupère quota dès l'arrivée sur la page
+    const fetchQuota = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quota`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setQuota(data);
+      } catch {
+        // Si échec, quota non affiché
+        setQuota(null);
+      }
+    };
+    fetchQuota();
+  }, []);
+
   useEffect(() => {
     const fetchFactures = async () => {
       setLoading(true);
@@ -138,7 +165,7 @@ export default function FacturesPage() {
         setFactures(
           data.map((f: any) => ({
             ...f,
-            statut: f.statut || "EN_ATTENTE", // enum attendu !
+            statut: f.statut || "EN_ATTENTE",
           }))
         );
       } catch (err) {
@@ -174,7 +201,6 @@ export default function FacturesPage() {
       setDropdownOpenId(null);
       return;
     }
-    // Optimistic UI
     setFactures(fs =>
       fs.map(f => f.id === facture.id ? { ...f, statut: newStatut } : f)
     );
@@ -194,15 +220,73 @@ export default function FacturesPage() {
       toast.success("Statut mis à jour !");
     } catch (e) {
       toast.error("Impossible de mettre à jour le statut");
-      // Si erreur, remet l'ancien statut côté front
       setFactures(fs =>
         fs.map(f => f.id === facture.id ? { ...f, statut: facture.statut } : f)
       );
     }
   };
 
+  // BANDEAU QUOTA et PROMO (front minimal)
+  const renderQuotaBanner = () => {
+    if (!quota) return null;
+    // Affiche pour freemium uniquement
+    if (quota.offer === "FREEMIUM") {
+      const remaining = quota.max - quota.used;
+      return (
+        <div style={{
+          marginBottom: 16,
+          padding: "12px 18px",
+          background: remaining === 0 ? "#fffbe9" : "#e7f7ee",
+          border: `1.5px solid ${remaining === 0 ? "#ffb01f" : "#53c59b"}`,
+          borderRadius: 10,
+          color: remaining === 0 ? "#e59500" : "#158466",
+          fontWeight: 500,
+          fontSize: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}>
+          {remaining > 0 ? (
+            <>
+              <span>Il vous reste <b>{remaining}/{quota.max}</b> document(s) à générer ce mois-ci sur l’offre <b>FREEMIUM</b>.</span>
+            </>
+          ) : (
+            <>
+              <span>
+                <b>Quota atteint !</b> Vous avez atteint la limite de <b>{quota.max}</b> documents/mois avec l’offre <b>FREEMIUM</b>.
+              </span>
+              <a
+                href="/dashboard/abonnement"
+                style={{
+                  marginLeft: 16,
+                  padding: "8px 18px",
+                  background: "#ffb01f",
+                  color: "#fff",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  boxShadow: "0 2px 12px #ffeab9",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "background .15s"
+                }}
+              >
+                Passer à une offre supérieure
+              </a>
+            </>
+          )}
+        </div>
+      );
+    }
+    // Autres offres : rien ou un autre bandeau éventuel
+    return null;
+  };
+
   return (
     <div className={styles.container}>
+      {/* BANDEAU QUOTA */}
+      {renderQuotaBanner()}
+
       <div className={styles.header}>
         <h1 className={styles.title}>Mes factures</h1>
         <button className={styles.createButton} onClick={() => window.location.href = "/dashboard/factures/nouvelle"}>

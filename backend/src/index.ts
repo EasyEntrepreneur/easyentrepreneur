@@ -23,6 +23,7 @@ import updateUserInfoRoutes from './routes/updateUserInfo';
 import invoicesRoute from './routes/invoices'
 import issuerRouter from "./routes/issuer";
 import clientRouter from "./routes/client";
+import quotaRouter from './routes/quota';
 
 
 dotenv.config()
@@ -69,6 +70,8 @@ app.use('/api', updateUserInfoRoutes);
 app.use('/api/invoices', invoicesRoute)
 app.use('/api/issuer', issuerRouter);
 app.use("/api/client", clientRouter);
+
+app.use("/api/quota", quotaRouter);
 
 app.use('/invoices', express.static(path.join(__dirname, 'invoices_pdf')));
 
