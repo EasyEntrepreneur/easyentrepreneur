@@ -1,11 +1,14 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
 import { authenticateToken } from '../middlewares/authenticateToken'
+import { checkDocumentQuota } from '../middlewares/checkDocumentQuota';
 import path from 'path'
 import fs from 'fs/promises'
 import puppeteer from 'puppeteer'
 
 const router = Router()
+
+
 
 // GET /invoices — toutes les factures du user connecté
 router.get('/', authenticateToken, async (req, res) => {
@@ -110,7 +113,7 @@ function generateInvoiceHtml(invoice: any) {
   `
 }
 
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
   const userId = req.user.userId
   const {
     client,

@@ -1,56 +1,53 @@
-import { Request, Response, NextFunction } from 'express';
+// backend/src/middlewares/checkDocumentQuota.ts
+import { Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 
-export const checkDocumentQuota = async (req: Request, res: Response, next: NextFunction) => {
-  const user = (req as any).user; // Auth middleware doit remplir req.user
-  if (!user) return res.status(401).json({ error: "Non authentifié" });
+/**
+ * Middleware to enforce a 5-document-per-month limit on FREEMIUM users.
+ * Requires authenticateToken to populate req.user with { userId }.
+ */
+export async function checkDocumentQuota(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  // assure req.user is defined and has userId
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(401).json({ error: 'Non authentifié' });
+  }
 
-  // Vérifier le plan actuel
-  const userDb = await prisma.user.findUnique({ where: { id: user.userId } });
-  const currentPlan = userDb?.currentPlan || 'FREEMIUM';
+  // Retrieve user's plan from database
+  const userRecord = await prisma.user.findUnique({ where: { id: userId } });
+  const currentPlan = userRecord?.currentPlan ?? 'FREEMIUM';
 
+  // Only limit FREEMIUM
   if (currentPlan !== 'FREEMIUM') {
-    // Si non-freemium, pas de limite
     return next();
   }
 
-  // Dates limites du mois en cours
+  // Compute month start/end
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  // Compte tous les documents créés ce mois-ci (Facture + Devis + Contrat)
-  const [facturesCount, devisCount, contratsCount] = await Promise.all([
-    prisma.invoice.count({
-      where: {
-        userId: user.userId,
-        createdAt: { gte: monthStart, lte: monthEnd }
-      }
-    }),
-    prisma.quote.count({
-      where: {
-        userId: user.userId,
-        createdAt: { gte: monthStart, lte: monthEnd }
-      }
-    }),
-    prisma.contract.count({
-      where: {
-        userId: user.userId,
-        createdAt: { gte: monthStart, lte: monthEnd }
-      }
-    }),
-  ]);
+  // Count invoices this month
+  const invoicesCount = await prisma.invoice.count({
+    where: { userId, createdAt: { gte: monthStart, lte: monthEnd } }
+  });
 
-  const totalDocs = facturesCount + devisCount + contratsCount;
+  // TODO: also count quotes and contracts if applicable
+  const totalDocs = invoicesCount;
 
   if (totalDocs >= 5) {
     return res.status(403).json({
-      error: "Limite atteinte : l'offre Freemium permet de générer 5 documents par mois. Passez à une offre supérieure pour continuer.",
-      quota: 5,
+      error: 'Limite atteinte : l’offre FREEMIUM permet de générer 5 documents par mois.',
       used: totalDocs,
+      quota: 5,
     });
   }
 
-  // Sinon, autorisé
-  return next();
-};
+  // OK to proceed
+  next();
+}

@@ -281,6 +281,16 @@ export default function InvoiceForm({
         body: JSON.stringify(payload),
       });
 
+      if (res.status === 403) {
+        // Bloc quota FREEMIUM atteint !
+        const data = await res.json();
+        toast.error(data.error || "Quota atteint : Vous avez atteint la limite de 5 documents par mois avec l’offre FREEMIUM. Passez à une offre supérieure pour continuer.", {
+          duration: 7000,
+        });
+        setLoading(false);
+        return;
+      }
+
       if (!res.ok) {
         let message = "Erreur lors de la création de la facture !";
         try {
@@ -304,15 +314,13 @@ export default function InvoiceForm({
       } catch {}
 
       // Stocke le number pour le toast de la page /dashboard/factures
-      // Après POST /invoices dans InvoiceForm.tsx
       sessionStorage.setItem(
         "showInvoiceToast",
         JSON.stringify({
           number: factureNumber,
-          pdfUrl: `/dashboard/factures/${factureNumber}/pdf` // <-- Lien local front (proxy page ou handler direct)
+          pdfUrl: `/dashboard/factures/${factureNumber}/pdf`
         })
       );
-
 
       // Rediriger vers la liste des factures
       router.push("/dashboard/factures");
