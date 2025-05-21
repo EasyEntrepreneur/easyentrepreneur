@@ -7,7 +7,6 @@
   overflow-y: auto; /* scroll seulement si nécessaire */
 }
 
-
 .card {
   padding: 2rem;
   width: 100%;
@@ -120,7 +119,6 @@
 /* Mets un style gris clair pour les inputs en lecture seule */
 .readOnly {
   background-color: #e7e7e7 !important;
-  cursor: not-allowed;
 }
 
 /* Bouton Modifier custom */
@@ -139,4 +137,58 @@
 
 .editBtn:hover {
   background-color: #e67600;
+}
+
+/* fonds + bordures pour email valid/invalid */
+.emailValid {
+  border-color: #52c41a !important;
+  background-color: rgba(82, 196, 26, 0.1) !important;
+}
+.emailInvalid {
+  border-color: #ff4d4f !important;
+  background-color: rgba(255, 77, 79, 0.1) !important;
+}
+
+/* indicateur ✓/✗ */
+.emailIndicator {
+  margin-left: 8px;
+  font-size: 1.2rem;
+}
+.emailIndicator.emailValid { color: #52c41a; }
+.emailIndicator.emailInvalid { color: #ff4d4f; }
+
+/* fonds pour le mot de passe selon la force */
+.pwdFaibleBg {
+  background-color: rgba(255, 77, 79, 0.1) !important;
+}
+.pwdMoyenBg {
+  background-color: rgba(250, 173, 20, 0.1) !important;
+}
+.pwdFortBg {
+  background-color: rgba(82, 196, 26, 0.1) !important;
+}
+
+/* jauge de force */
+.strengthMeter {
+  width: 100%;
+  height: 6px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.strengthBar {
+  height: 100%;
+  width: 0;
+  transition: width 0.3s ease;
+}
+.strengthFaible { width: 33%; background: #ff4d4f; }
+.strengthMoyen  { width: 66%; background: #faad14; }
+.strengthFort   { width:100%; background: #52c41a; }
+.strengthLabel {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  color: #555;
 }
