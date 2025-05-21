@@ -8,7 +8,54 @@ import puppeteer from 'puppeteer'
 
 const router = Router()
 
+// Suppression d'une facture (avec contrôle utilisateur)
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const invoiceId = req.params.id;
+  try {
+    // 1. Supprime d'abord tous les items de la facture (sécurité FK)
+    await prisma.invoiceItem.deleteMany({
+      where: { invoiceId }
+    });
+    // 2. Supprime la facture SEULEMENT si elle appartient à l'utilisateur
+    const result = await prisma.invoice.deleteMany({
+      where: { id: invoiceId, userId }
+    });
+    if (result.count === 0) {
+      return res.status(404).json({ error: "Facture introuvable ou accès refusé." });
+    }
+    res.json({ success: true, id: invoiceId });
+  } catch (error) {
+    console.error("[DELETE] Erreur suppression facture :", error);
+    res.status(500).json({ error: "Erreur lors de la suppression de la facture." });
+  }
+});
 
+// Suppression groupée de factures
+router.post('/bulk-delete', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { ids } = req.body; // tableau d'ids
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Aucune facture sélectionnée" });
+  }
+  try {
+    // 1. Supprime tous les items liés à ces factures
+    await prisma.invoiceItem.deleteMany({
+      where: { invoiceId: { in: ids } }
+    });
+    // 2. Supprime toutes les factures appartenant à ce user
+    const result = await prisma.invoice.deleteMany({
+      where: { id: { in: ids }, userId }
+    });
+    if (result.count === 0) {
+      return res.status(404).json({ error: "Aucune facture supprimée (non trouvée ou accès refusé)." });
+    }
+    res.json({ deleted: result.count, ids });
+  } catch (error) {
+    console.error("[BULK DELETE] Erreur suppression factures :", error);
+    res.status(500).json({ error: "Erreur lors de la suppression des factures." });
+  }
+});
 
 // GET /invoices — toutes les factures du user connecté
 router.get('/', authenticateToken, async (req, res) => {

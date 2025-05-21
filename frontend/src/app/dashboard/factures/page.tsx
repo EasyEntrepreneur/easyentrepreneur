@@ -26,7 +26,7 @@ type Facture = {
 type QuotaInfo = {
   used: number
   max: number
-  offer: string // "FREEMIUM" | ...
+  offer: string
 };
 
 const STATUTS: { value: InvoiceStatus, label: string }[] = [
@@ -84,6 +84,38 @@ const handleShowPdf = async (number: string) => {
   }
 };
 
+export function showConfirmToast(message: string, onConfirm: () => void) {
+  toast(
+    (t) => (
+      <span>
+        {message}
+        <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+          <button
+            style={{
+              background: "#ef4444", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
+            }}
+            onClick={() => {
+              toast.dismiss(t.id);
+              onConfirm();
+            }}
+          >
+            Oui, supprimer
+          </button>
+          <button
+            style={{
+              background: "#f3f4f6", color: "#222", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
+            }}
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Annuler
+          </button>
+        </div>
+      </span>
+    ),
+    { duration: 6000 }
+  );
+}
+
 function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -130,6 +162,9 @@ export default function FacturesPage() {
   // QUOTA STATES
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
 
+  // Sélection
+  const [selected, setSelected] = useState<string[]>([]);
+
   useEffect(() => {
     // Récupère quota dès l'arrivée sur la page
     const fetchQuota = async () => {
@@ -144,7 +179,6 @@ export default function FacturesPage() {
         const data = await res.json();
         setQuota(data);
       } catch {
-        // Si échec, quota non affiché
         setQuota(null);
       }
     };
@@ -178,6 +212,62 @@ export default function FacturesPage() {
 
   useEffectToastOnRedirect(handleShowPdf);
 
+  // Sélection groupée
+  const toggleSelect = (id: string) => {
+    setSelected((sel) =>
+      sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]
+    );
+  };
+  const selectAll = () => {
+    setSelected(visibleFactures.map((f) => f.id));
+  };
+  const deselectAll = () => {
+    setSelected([]);
+  };
+  
+  const handleDelete = (id: string) => {
+    showConfirmToast("Supprimer cette facture ?", async () => {
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error();
+        setFactures((factures) => factures.filter((f) => f.id !== id));
+        setSelected((selected) => selected.filter((x) => x !== id));
+        toast.success("Facture supprimée !");
+      } catch {
+        toast.error("Suppression impossible.");
+      }
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    showConfirmToast(`Supprimer ${selected.length} facture(s) ?`, async () => {
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/bulk-delete`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ids: selected }),
+        });
+        if (!res.ok) throw new Error();
+        setFactures((factures) => factures.filter((f) => !selected.includes(f.id)));
+        setSelected([]);
+        toast.success("Factures supprimées !");
+      } catch {
+        toast.error("Suppression impossible.");
+      }
+    });
+  };
+
+
   // Filtres actifs
   const filteredFactures = factures.filter((facture) => {
     const matchSearch = facture.clientName?.toLowerCase().includes(search.toLowerCase());
@@ -195,7 +285,6 @@ export default function FacturesPage() {
     .filter((f) => f.statut === 'PAYEE')
     .reduce((total, f) => total + (f.totalTTC || 0), 0);
 
-  // Changement du statut
   const handleChangeStatut = async (facture: Facture, newStatut: InvoiceStatus) => {
     if (newStatut === facture.statut) {
       setDropdownOpenId(null);
@@ -229,7 +318,6 @@ export default function FacturesPage() {
   // BANDEAU QUOTA et PROMO (front minimal)
   const renderQuotaBanner = () => {
     if (!quota) return null;
-    // Affiche pour freemium uniquement
     if (quota.offer === "FREEMIUM") {
       const remaining = quota.max - quota.used;
       return (
@@ -278,7 +366,6 @@ export default function FacturesPage() {
         </div>
       );
     }
-    // Autres offres : rien ou un autre bandeau éventuel
     return null;
   };
 
@@ -308,9 +395,43 @@ export default function FacturesPage() {
       <h2 className="text-xl font-semibold">Evolution du chiffre d'affaire</h2>
       <RevenueChart invoices={factures} />
 
-      <div className={styles.filtersBar}>
-        <h2 className="text-xl font-semibold">Mes factures générées</h2>
-        <div className={styles.filters}>
+      {/* NOUVELLE BARRE FILTRES & SUPPRESSION GROUPÉE */}
+      <div className={styles.filtersBar} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
+        {/* Boutons et texte à gauche */}
+        {selected.length > 0 && (
+          <div style={{
+            background: "#fff8e1",
+            border: "1px solid #ffe0b2",
+            borderRadius: 8,
+            padding: "6px 16px",
+            color: "#d35400",
+            fontWeight: 500,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginRight: 12
+          }}>
+            <span>{selected.length} sélectionnée(s)</span>
+            <button
+              style={{
+                background: "#e57373",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                fontWeight: 700,
+                padding: "7px 16px",
+                marginLeft: 4,
+                cursor: "pointer",
+                transition: "background .15s"
+              }}
+              onClick={handleDeleteSelected}
+            >
+              Supprimer la sélection
+            </button>
+          </div>
+        )}
+        {/* Filtres classiques à droite */}
+        <div style={{ display: "flex", alignItems: "center", flex: 1, gap: 12 }}>
           <select
             value={filtreStatut}
             onChange={(e) => setFiltreStatut(e.target.value as any)}
@@ -327,14 +448,26 @@ export default function FacturesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={styles.input}
+            style={{ flex: 1 }}
           />
         </div>
       </div>
-      
+
       <div className={styles.tableContainer}>
         <table className={styles.table}>
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  checked={selected.length === visibleFactures.length && visibleFactures.length > 0}
+                  onChange={() =>
+                    selected.length === visibleFactures.length
+                      ? deselectAll()
+                      : selectAll()
+                  }
+                />
+              </th>
               <th>Numéro</th>
               <th>Client</th>
               <th>Date</th>
@@ -346,17 +479,24 @@ export default function FacturesPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>Chargement…</td>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '1rem' }}>Chargement…</td>
               </tr>
             ) : visibleFactures.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '1rem', color: '#aaa' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '1rem', color: '#aaa' }}>
                   Aucune facture trouvée.
                 </td>
               </tr>
             ) : (
               visibleFactures.map((facture) => (
                 <tr key={facture.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(facture.id)}
+                      onChange={() => toggleSelect(facture.id)}
+                    />
+                  </td>
                   <td>{facture.number}</td>
                   <td>{facture.clientName}</td>
                   <td>{facture.issuedAt ? new Date(facture.issuedAt).toLocaleDateString("fr-FR") : ''}</td>
@@ -376,7 +516,6 @@ export default function FacturesPage() {
                       >
                         {STATUT_LABELS[facture.statut]} ⌄
                       </span>
-                      {/* Dropdown */}
                       {dropdownOpenId === facture.id && (
                         <ul
                           style={{
@@ -437,6 +576,19 @@ export default function FacturesPage() {
                         }}
                       >
                         ⬇️
+                      </button>
+                      <button
+                        title="Supprimer"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "1.2em",
+                          color: "#e57373"
+                        }}
+                        onClick={() => handleDelete(facture.id)}
+                      >
+                        🗑️
                       </button>
                       <button title="Envoyer par mail">📧</button>
                     </div>
