@@ -58,6 +58,7 @@ const handleDownloadPdf = async (number: string) => {
     a.remove();
     window.URL.revokeObjectURL(url);
   } catch (e) {
+    console.error("Erreur création devis :", e);
     toast.error("Impossible de télécharger le PDF");
   }
 };
@@ -80,6 +81,7 @@ const handleShowPdf = async (number: string) => {
     window.open(url, "_blank");
     setTimeout(() => window.URL.revokeObjectURL(url), 5000);
   } catch (e) {
+    console.error("Erreur création devis :", e);
     toast.error("Impossible d'ouvrir le PDF");
   }
 };
@@ -200,6 +202,7 @@ export default function DevisPage() {
           }))
         );
       } catch (err) {
+        console.error("Erreur création devis :", err);
         toast.error("Impossible de charger les devis");
       }
       setLoading(false);

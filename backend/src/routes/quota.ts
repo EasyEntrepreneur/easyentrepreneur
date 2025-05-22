@@ -7,21 +7,36 @@ const router = Router();
 
 router.get("/", authenticateToken, async (req, res) => {
   const userId = req.user.userId || req.user.id;
-  // Exemple : quota = 5 si offre FREEMIUM, sinon très élevé ou selon l’offre
+
+  // Récupère l'offre de l'utilisateur
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const isFreemium = user?.currentPlan === "FREEMIUM";
   const quotaMax = isFreemium ? 5 : 99999;
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0,0,0,0);
 
-  const docsCount = await prisma.invoice.count({
+  // Calcule le début et la fin du mois
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Compte les factures créées ce mois
+  const invoicesCount = await prisma.invoice.count({
     where: {
       userId,
-      issuedAt: { gte: startOfMonth },
+      createdAt: { gte: startOfMonth, lte: endOfMonth },
     },
   });
-  // Ajoute pareil pour d'autres types de docs si besoin (devis/contrats)
+
+  // Compte les devis créés ce mois
+  const quotesCount = await prisma.quote.count({
+    where: {
+      userId,
+      createdAt: { gte: startOfMonth, lte: endOfMonth },
+    },
+  });
+
+  // Additionne tous les documents générés
+  const docsCount = invoicesCount + quotesCount;
+
   res.json({
     used: docsCount,
     max: quotaMax,

@@ -169,21 +169,54 @@ enum InvoiceStatus {
 }
 
 model Quote {
-  id            String      @id @default(uuid())
+  id            String      @id @default(cuid())
+  number        String      @unique // ex: 2024-001
+  user          User        @relation(fields: [userId], references: [id])
   userId        String
   clientName    String
   clientAddress String
-  date          DateTime    @default(now())
-  items         Json
-  total         Float
-  status        String      // ex: "en attente", "accepté", "refusé"
-  notes         String?
+  clientZip     String
+  clientCity    String
+  clientEmail   String?
+  clientPhone   String?
+  clientId      String?
+  client        Client?     @relation(fields: [clientId], references: [id])
+
+  statut        QuoteStatus @default(EN_ATTENTE)
+  issuedAt      DateTime    @default(now())
+  validUntil    DateTime?   // Optionnel : validité du devis
+
+  items         QuoteItem[]
+  totalHT       Float
+  totalTVA      Float
+  totalTTC      Float
+
+  notes         String?     // Remarques / conditions particulières
+  pdfPath       String?     // Chemin du PDF stocké (optionnel)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-
-  user          User        @relation(fields: [userId], references: [id])
 }
 
+model QuoteItem {
+  id          String  @id @default(cuid())
+  quote       Quote   @relation(fields: [quoteId], references: [id])
+  quoteId     String
+
+  description String
+  quantity    Int
+  unitPrice   Float
+  vatRate     Float // ex: 20.0 pour 20 %
+
+  totalHT     Float
+  totalTVA    Float
+  totalTTC    Float
+}
+
+enum QuoteStatus {
+  ACCEPTE
+  EN_ATTENTE
+  REFUSE
+}
 
 model Client {
   id        String   @id @default(uuid())
@@ -200,6 +233,7 @@ model Client {
 
   user      User     @relation(fields: [userId], references: [id])
   invoices Invoice[]    // <--- RELATION INVERSE !
+  quotes   Quote[]
 
   @@index([userId])
 }

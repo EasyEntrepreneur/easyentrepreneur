@@ -254,7 +254,7 @@ export default function QuotePreview({
       <table className="dateTable">
         <tbody>
           <tr>
-            <td className="dateLabel">Date de facture</td>
+            <td className="dateLabel">Date de devis</td>
             <td className="dateInput">{formatDate(date)}</td>
           </tr>
         </tbody>

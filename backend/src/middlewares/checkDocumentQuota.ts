@@ -1,4 +1,3 @@
-// backend/src/middlewares/checkDocumentQuota.ts
 import { Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
@@ -12,33 +11,34 @@ export async function checkDocumentQuota(
   res: Response,
   next: NextFunction
 ) {
-  // assure req.user is defined and has userId
   const userId = req.user?.userId;
   if (!userId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
 
-  // Retrieve user's plan from database
   const userRecord = await prisma.user.findUnique({ where: { id: userId } });
   const currentPlan = userRecord?.currentPlan ?? 'FREEMIUM';
 
-  // Only limit FREEMIUM
   if (currentPlan !== 'FREEMIUM') {
     return next();
   }
 
-  // Compute month start/end
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  // Count invoices this month
+  // Compte factures créées ce mois
   const invoicesCount = await prisma.invoice.count({
     where: { userId, createdAt: { gte: monthStart, lte: monthEnd } }
   });
 
-  // TODO: also count quotes and contracts if applicable
-  const totalDocs = invoicesCount;
+  // Compte devis créés ce mois
+  const quotesCount = await prisma.quote.count({
+    where: { userId, createdAt: { gte: monthStart, lte: monthEnd } }
+  });
+
+  // (Tu pourras ajouter contractsCount plus tard si tu veux)
+  const totalDocs = invoicesCount + quotesCount;
 
   if (totalDocs >= 5) {
     return res.status(403).json({
@@ -48,6 +48,5 @@ export async function checkDocumentQuota(
     });
   }
 
-  // OK to proceed
   next();
 }
