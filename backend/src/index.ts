@@ -24,6 +24,7 @@ import invoicesRoute from './routes/invoices'
 import issuerRouter from "./routes/issuer";
 import clientRouter from "./routes/client";
 import quotaRouter from './routes/quota';
+import quoteRoutes from './routes/quotes';
 
 
 dotenv.config()
@@ -74,6 +75,8 @@ app.use("/api/client", clientRouter);
 app.use("/api/quota", quotaRouter);
 
 app.use('/invoices', express.static(path.join(__dirname, 'invoices_pdf')));
+
+app.use('/api/quotes', quoteRoutes);
 
 app.listen(port, () => {
   console.log(`🚀 API backend running at: http://localhost:${port}/api`)

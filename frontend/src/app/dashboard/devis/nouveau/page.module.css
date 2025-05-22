@@ -1,0 +1,11 @@
+.dashboardLayout {
+  display: flex;
+  align-items: flex-start;  /* tous les kids alignés en haut */
+  gap: 1rem;
+}
+
+/* si tu veux limiter la largeur de ton form wrapper */
+.invoiceWrapper {
+  flex: 1;
+  max-width: 980px; /* ou la valeur qui te convient */
+}

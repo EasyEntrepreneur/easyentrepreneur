@@ -393,7 +393,7 @@ export default function FacturesPage() {
       </div>
 
       <h2 className="text-xl font-semibold">Evolution du chiffre d'affaire</h2>
-      <RevenueChart invoices={factures} />
+      <RevenueChart data={factures} type="facture" />
 
       {/* NOUVELLE BARRE FILTRES & SUPPRESSION GROUPÉE */}
       <div className={styles.filtersBar} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
