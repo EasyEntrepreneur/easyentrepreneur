@@ -1,14 +1,13 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import styles from "./admin.module.css";
-import { prisma } from "@/lib/prisma";
+import prisma from "../../../../backend/src/lib/prisma";
 import { FaUser, FaFileAlt, FaMoneyBill, FaCog, FaChartBar, FaSignOutAlt } from "react-icons/fa";
 import LogoutButton from "@/components/LogoutButton";
 import RevenueChart from "@/components/RevenueChart";
 
 export default async function AdminPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
 
   if (!session || session.user.role !== "ADMIN") {
     redirect("/");
@@ -99,7 +98,6 @@ export default async function AdminPage() {
 
         <div className={styles.sections}>
             <div className={styles.section}>
-                <RevenueChart />
             </div>
         </div>
 
