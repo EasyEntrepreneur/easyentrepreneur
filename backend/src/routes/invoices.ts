@@ -4,7 +4,8 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota';
 import path from 'path'
 import fs from 'fs/promises'
-import puppeteer, { executablePath } from 'puppeteer';
+import puppeteer from 'puppeteer';
+import chromium from 'chrome-aws-lambda';
 
 const router = Router()
 
@@ -297,14 +298,9 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     // 5. Génération du PDF (inchangé)
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
     const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--no-zygote"
-      ],
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
     const page = await browser.newPage()
     await page.setContent(htmlToUse, { waitUntil: "networkidle0" })
