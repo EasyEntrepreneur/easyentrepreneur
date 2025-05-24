@@ -1,6 +1,7 @@
 import { features } from "@/utils/featureAccess";
 import FeatureCard from "./FeatureCard";
-import { Plan } from "@prisma/client";
+
+export type Plan = "FREEMIUM" | "BASIC" | "STANDARD" | "PREMIUM";
 
 export default function FeatureGrid({ currentPlan }: { currentPlan: Plan }) {
   return (
