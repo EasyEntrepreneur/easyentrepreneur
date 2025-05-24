@@ -5,12 +5,13 @@ import styles from './factures.module.css'
 import toast from "react-hot-toast"
 import RevenueChart from '@/components/RevenueChart';
 
+type InvoiceStatus = 'PAYEE' | 'EN_ATTENTE' | 'ANNULE';
+
 const STATUT_LABELS: Record<InvoiceStatus, string> = {
   PAYEE: 'Payée',
   EN_ATTENTE: 'En attente',
   ANNULE: 'Annulée'
 };
-type InvoiceStatus = 'PAYEE' | 'EN_ATTENTE' | 'ANNULE';
 
 type Facture = {
   id: string
@@ -22,7 +23,6 @@ type Facture = {
   statut: InvoiceStatus
 }
 
-// QUOTA TYPES
 type QuotaInfo = {
   used: number
   max: number
@@ -34,6 +34,8 @@ const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'EN_ATTENTE', label: 'En attente' },
   { value: 'ANNULE', label: 'Annulée' }
 ];
+
+// ---- FONCTIONS INTERNES ----
 
 const handleDownloadPdf = async (number: string) => {
   const token = localStorage.getItem("token");
@@ -84,7 +86,7 @@ const handleShowPdf = async (number: string) => {
   }
 };
 
-export function showConfirmToast(message: string, onConfirm: () => void) {
+function showConfirmToast(message: string, onConfirm: () => void) {
   toast(
     (t) => (
       <span>
@@ -152,6 +154,7 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
   }, [handleShowPdf]);
 }
 
+// ------------- PAGE -------------
 export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [search, setSearch] = useState('');
@@ -159,10 +162,8 @@ export default function FacturesPage() {
   const [loading, setLoading] = useState(true);
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
 
-  // QUOTA STATES
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
 
-  // Sélection
   const [selected, setSelected] = useState<string[]>([]);
 
   useEffect(() => {
@@ -224,7 +225,7 @@ export default function FacturesPage() {
   const deselectAll = () => {
     setSelected([]);
   };
-  
+
   const handleDelete = (id: string) => {
     showConfirmToast("Supprimer cette facture ?", async () => {
       const token = localStorage.getItem("token");
@@ -266,7 +267,6 @@ export default function FacturesPage() {
       }
     });
   };
-
 
   // Filtres actifs
   const filteredFactures = factures.filter((facture) => {
@@ -315,7 +315,6 @@ export default function FacturesPage() {
     }
   };
 
-  // BANDEAU QUOTA et PROMO (front minimal)
   const renderQuotaBanner = () => {
     if (!quota) return null;
     if (quota.offer === "FREEMIUM") {
@@ -397,7 +396,6 @@ export default function FacturesPage() {
 
       {/* NOUVELLE BARRE FILTRES & SUPPRESSION GROUPÉE */}
       <div className={styles.filtersBar} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-        {/* Boutons et texte à gauche */}
         {selected.length > 0 && (
           <div style={{
             background: "#fff8e1",
@@ -430,7 +428,6 @@ export default function FacturesPage() {
             </button>
           </div>
         )}
-        {/* Filtres classiques à droite */}
         <div style={{ display: "flex", alignItems: "center", flex: 1, gap: 12 }}>
           <select
             value={filtreStatut}
