@@ -14,15 +14,12 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage('');
 
     if (!API_URL) {
       toast.error("Problème de configuration serveur.");
-      setErrorMessage("Problème de configuration serveur.");
       return;
     }
 
@@ -41,12 +38,9 @@ export default function RegisterPage() {
           window.location.href = '/auth/login';
         }, 1200);
       } else {
-        setErrorMessage(data?.error || "Erreur lors de l'inscription");
         toast.error(data?.error || "Erreur lors de l'inscription");
       }
     } catch (err) {
-      console.error('Erreur réseau :', err);
-      setErrorMessage("Erreur de connexion au serveur. Veuillez réessayer.");
       toast.error("Erreur de connexion au serveur. Veuillez réessayer.");
     }
   };

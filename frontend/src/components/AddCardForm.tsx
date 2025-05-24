@@ -1,14 +1,9 @@
 'use client';
 
-import {
-  useStripe,
-  useElements,
-  CardNumberElement,
-  CardExpiryElement,
-  CardCvcElement,
-} from '@stripe/react-stripe-js';
+import { useStripe, useElements, CardNumberElement, CardExpiryElement, CardCvcElement } from '@stripe/react-stripe-js';
 import { useState } from 'react';
 import styles from './AddCardForm.module.css';
+import toast from 'react-hot-toast';
 
 type Props = {
   clientSecret: string;
@@ -20,21 +15,20 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
   const stripe = useStripe();
   const elements = useElements();
   const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error] = useState<string | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setSuccess(null);
 
     if (!stripe || !elements) return;
 
     if (!clientSecret) {
-      setError("Impossible de vérifier la carte : clientSecret manquant.");
+      toast.error("Impossible de vérifier la carte : clientSecret manquant.");
       return;
     }
 
@@ -43,7 +37,7 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
     const cvc = elements.getElement(CardCvcElement);
 
     if (!card || !exp || !cvc) {
-      setError("Veuillez remplir tous les champs de carte.");
+      toast.error("Veuillez remplir tous les champs de carte.");
       return;
     }
 
@@ -57,14 +51,13 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
     });
 
     if (stripeError) {
-      setError(stripeError.message ?? 'Erreur lors de l’enregistrement de la carte.');
+      toast.error(stripeError.message ?? 'Erreur lors de l’enregistrement de la carte.');
       setLoading(false);
       return;
     }
 
     if (setupIntent?.status === 'succeeded') {
       const paymentMethodId = setupIntent.payment_method as string;
-      console.log('✅ Carte enregistrée :', paymentMethodId);
 
       try {
         const res = await fetch(`${API_URL}/save-payment-method`, {
@@ -76,7 +69,7 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          setError("Carte enregistrée chez Stripe, mais échec côté base de données.");
+          toast.error("Carte enregistrée chez Stripe, mais échec côté base de données.");
           setLoading(false);
           return;
         }
@@ -84,11 +77,10 @@ export default function AddCardForm({ clientSecret, userId, onCardSaved }: Props
         setSuccess("✅ Carte ajoutée avec succès.");
         if (onCardSaved) onCardSaved(paymentMethodId);
       } catch (err) {
-        console.error('Erreur backend :', err);
-        setError("Erreur serveur lors de l’enregistrement de la carte.");
+        toast.error("Erreur serveur lors de l’enregistrement de la carte.");
       }
     } else {
-      setError("L'enregistrement de la carte a échoué.");
+      toast.error("L'enregistrement de la carte a échoué.");
     }
 
     setLoading(false);

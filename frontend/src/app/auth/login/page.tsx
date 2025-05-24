@@ -10,17 +10,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     if (!process.env.NEXT_PUBLIC_API_URL) {
-      console.error("❌ L'URL de l’API n’est pas définie !");
-      setError("Problème de configuration.");
       toast.error("Problème de configuration serveur.");
       setLoading(false);
       return;
@@ -36,10 +32,8 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log("✅ Réponse API login :", data);
 
       if (!res.ok) {
-        setError(data.message || 'Email ou mot de passe invalide.');
         toast.error(data.message || 'Email ou mot de passe invalide.');
         setLoading(false);
         return;
@@ -51,13 +45,9 @@ export default function LoginPage() {
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 700); // petit délai pour voir le toast
-      } else {
-        setError("Réponse inattendue du serveur.");
         toast.error("Réponse inattendue du serveur.");
       }
     } catch (err) {
-      console.error('❌ Erreur serveur :', err);
-      setError('Erreur serveur. Veuillez réessayer.');
       toast.error('Erreur serveur. Veuillez réessayer.');
     } finally {
       setLoading(false);

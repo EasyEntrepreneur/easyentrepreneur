@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useStripe } from '@stripe/react-stripe-js';
 import { useState } from 'react';
 import styles from './CheckoutSummary.module.css';
+import toast from 'react-hot-toast';
 
 type Props = {
   nom: string;
@@ -36,14 +37,14 @@ export default function CheckoutSummary({
   const vat = subtotal * 0.2;
   const total = subtotal + vat;
 
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handlePay = async () => {
-    setError(null);
+    toast.error(null);
 
     if (!selectedCardId) {
-      setError('Veuillez sélectionner une carte de paiement.');
+      toast.error('Veuillez sélectionner une carte de paiement.');
       return;
     }
 
@@ -68,7 +69,7 @@ export default function CheckoutSummary({
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        setError(data.error || 'Une erreur est survenue lors de la souscription.');
+        toast.error(data.error || 'Une erreur est survenue lors de la souscription.');
         setLoading(false);
         return;
       }
@@ -82,22 +83,21 @@ export default function CheckoutSummary({
         const code = result.error.code;
 
         if (code === 'card_declined') {
-          setError('❌ Paiement refusé par votre banque. Essayez une autre carte.');
+          toast.error('❌ Paiement refusé par votre banque. Essayez une autre carte.');
         } else if (code === 'insufficient_funds') {
-          setError('❌ Fonds insuffisants. Vérifiez votre solde ou utilisez une autre carte.');
+          toast.error('❌ Fonds insuffisants. Vérifiez votre solde ou utilisez une autre carte.');
         } else if (code === 'expired_card') {
-          setError('❌ Carte expirée. Veuillez en utiliser une autre.');
+          toast.error('❌ Carte expirée. Veuillez en utiliser une autre.');
         } else if (code === 'payment_intent_incompatible_payment_method') {
-          setError("❌ Le paiement a échoué. La carte n'a pas été transmise correctement.");
+          toast.error("❌ Le paiement a échoué. La carte n'a pas été transmise correctement.");
         } else {
-          setError(result.error.message || '❌ Le paiement a échoué.');
+          toast.error(result.error.message || '❌ Le paiement a échoué.');
         }
       } else {
         window.location.href = '/merci';
       }
     } catch (err) {
-      console.error(err);
-      setError('❌ Erreur serveur pendant le paiement.');
+      toast.error('❌ Erreur serveur pendant le paiement.');
     } finally {
       setLoading(false);
     }
