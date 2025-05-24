@@ -36,12 +36,25 @@ const port = process.env.PORT || 4000
 console.log('🔑 OPENAI_API_KEY:', process.env.OPENAI_API_KEY)
 console.log('💳 STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY)
 
-app.use(
-  cors({
-    origin: "http://localhost:3000",  // ou process.env.FRONTEND_URL
-    credentials: true,                // <— autorise les cookies et le header Authorization
-  })
-);
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://easyentrepreneur.vercel.app'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Autorise Postman/fetch direct, ou sans origin (ex: tests SSR)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // si tu utilises des cookies, sinon tu peux omettre
+}));
+
 app.use(express.json())
 
 // ✅ Toutes les routes passent sous /api
