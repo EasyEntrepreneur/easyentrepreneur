@@ -1,6 +1,6 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { FlatCompat } from '@eslint/eslintrc';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,7 +10,6 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  // 👉 Ajoute la propriété ignores ici
   {
     ignores: [
       "node_modules",
@@ -18,15 +17,14 @@ const eslintConfig = [
       "out",
       "public",
       "coverage",
-      "backend"
+      "backend",
+      "src/generated"
     ]
   },
   ...compat.extends(
     "next/core-web-vitals",
     "next/typescript",
-    // Tu peux ajouter ici d'autres extends si besoin
   ),
-  // 👉 Ajoute une section custom rules à la fin
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     rules: {
