@@ -298,7 +298,6 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
     const browser = await puppeteer.launch({
       headless: true,
-      executablePath: executablePath(),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
