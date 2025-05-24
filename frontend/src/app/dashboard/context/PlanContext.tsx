@@ -2,15 +2,15 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import { Plan } from '@prisma/client';
+import { currentPlan } from '@prisma/client';
 
-const PlanContext = createContext<Plan | null>(null);
+const PlanContext = createContext<currentPlan | null>(null);
 
 export const PlanProvider = ({
   plan,
   children,
 }: {
-  plan: Plan;
+  plan: currentPlan;
   children: React.ReactNode;
 }) => {
   return <PlanContext.Provider value={plan}>{children}</PlanContext.Provider>;
