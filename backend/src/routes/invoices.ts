@@ -4,7 +4,7 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota';
 import path from 'path'
 import fs from 'fs/promises'
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import chromium from 'chrome-aws-lambda';
 
 const router = Router()
@@ -300,7 +300,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+      headless: true,
     });
     const page = await browser.newPage()
     await page.setContent(htmlToUse, { waitUntil: "networkidle0" })
