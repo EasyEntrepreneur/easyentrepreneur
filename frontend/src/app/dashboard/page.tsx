@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import styles from '../admin/admin.module.css';
-import FeatureGrid from './components/FeatureGrid';
+import FeatureGrid, { Plan } from './components/FeatureGrid';
 import UserKpiCards from './components/UserKpiCards';
 import { PlanProvider } from './context/PlanContext';
 
@@ -95,13 +95,13 @@ export default function UserDashboard() {
           Plan actuel : <strong>{planLabel}</strong>
         </p>
 
-        <PlanProvider plan={user.currentPlan}>
+        <PlanProvider plan={user.currentPlan as Plan}>
           <UserKpiCards
             documentsGenerated={documentsGenerated}
             remainingAI={remainingAI}
             revenue={revenue}
           />
-          <FeatureGrid currentPlan={user.currentPlan} />
+          <FeatureGrid currentPlan={user.currentPlan as Plan} />
         </PlanProvider>
       </main>
     </div>
