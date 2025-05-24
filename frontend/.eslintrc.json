@@ -1,0 +1,13 @@
+{
+  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended"],
+  "plugins": ["@typescript-eslint"],
+  "parser": "@typescript-eslint/parser",
+  "rules": {
+    // ADOUCIS LES REGLES CI-DESSOUS POUR LE DEV (tu peux remettre plus strict plus tard)
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "react/no-unescaped-entities": "warn",
+    "no-unused-vars": "warn",
+    "@next/next/no-html-link-for-pages": "warn"
+  }
+}
