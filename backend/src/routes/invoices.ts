@@ -297,6 +297,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     // 5. Génération du PDF (inchangé)
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
+    console.log("Chromium executable path (cloud):", await chromium.executablePath);
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath,

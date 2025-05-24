@@ -287,6 +287,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     // 5. Génération PDF
     const htmlToUse = quoteHtml || generateQuoteHtml(newQuote);
+    console.log("Chromium executable path (cloud):", await chromium.executablePath);
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath,
