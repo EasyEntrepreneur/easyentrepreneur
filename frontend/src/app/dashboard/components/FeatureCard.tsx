@@ -1,5 +1,7 @@
-import { Plan } from "@prisma/client";
 import styles from "./FeatureCard.module.css";
+
+export type Plan = "FREEMIUM" | "BASIC" | "STANDARD" | "PREMIUM";
+
 
 type Props = {
   label: string;
