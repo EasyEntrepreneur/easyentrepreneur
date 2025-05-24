@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import styles from './devis.module.css'
 import toast from "react-hot-toast"
-import RevenueChart from '@/components/RevenueChart';
+import RevenueChart from '@/components/RevenueChart'
 
 // STATUTS POUR DEVIS
 type QuoteStatus = 'ACCEPTE' | 'EN_ATTENTE' | 'REFUSE';
@@ -34,6 +34,8 @@ const STATUTS: { value: QuoteStatus, label: string }[] = [
   { value: 'EN_ATTENTE', label: 'En attente' },
   { value: 'REFUSE', label: 'Refusé' }
 ];
+
+// ---- FONCTIONS INTERNES ----
 
 const handleDownloadPdf = async (number: string) => {
   const token = localStorage.getItem("token");
@@ -86,7 +88,7 @@ const handleShowPdf = async (number: string) => {
   }
 };
 
-export function showConfirmToast(message: string, onConfirm: () => void) {
+function showConfirmToast(message: string, onConfirm: () => void) {
   toast(
     (t) => (
       <span>
@@ -154,6 +156,7 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
   }, [handleShowPdf]);
 }
 
+// ------------- PAGE -------------
 export default function DevisPage() {
   const [devis, setDevis] = useState<Devis[]>([]);
   const [search, setSearch] = useState('');
@@ -224,7 +227,7 @@ export default function DevisPage() {
   const deselectAll = () => {
     setSelected([]);
   };
-  
+
   const handleDelete = (id: string) => {
     showConfirmToast("Supprimer ce devis ?", async () => {
       const token = localStorage.getItem("token");
@@ -266,7 +269,6 @@ export default function DevisPage() {
       }
     });
   };
-
 
   // Filtres actifs
   const filteredDevis = devis.filter((devis) => {
