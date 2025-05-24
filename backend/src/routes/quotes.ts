@@ -287,11 +287,17 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     // 5. Génération PDF
     const htmlToUse = quoteHtml || generateQuoteHtml(newQuote);
-    console.log("Chromium executable path (cloud):", await chromium.executablePath);
+    const executablePath = await chromium.executablePath;
+    console.log("chromium.executablePath =", executablePath);
+    if (!executablePath) {
+      throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
+    }
+
     const browser = await puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath,
+      executablePath,
       headless: true,
+      ignoreDefaultArgs: ['--disable-extensions'],
     });
     const page = await browser.newPage();
     await page.setContent(htmlToUse, { waitUntil: "networkidle0" });
