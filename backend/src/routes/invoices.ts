@@ -4,7 +4,7 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota';
 import path from 'path'
 import fs from 'fs/promises'
-import puppeteer from 'puppeteer'
+import puppeteer, { executablePath } from 'puppeteer';
 
 const router = Router()
 
@@ -222,11 +222,11 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     let nextNumber = 1;
     if (invoicesThisYear.length > 0) {
       const nums = invoicesThisYear
-        .map(inv => {
+        .map((inv: any) => {
           const match = inv.number.match(regex);
           return match ? parseInt(match[1], 10) : 0;
         })
-        .filter(n => !isNaN(n));
+        .filter((n: number) => !isNaN(n));
       if (nums.length > 0) {
         nextNumber = Math.max(...nums) + 1;
       }
@@ -296,7 +296,17 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     // 5. Génération du PDF (inchangé)
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
-    const browser = await puppeteer.launch({ headless: true })
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath: executablePath(),
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote"
+      ],
+    });
     const page = await browser.newPage()
     await page.setContent(htmlToUse, { waitUntil: "networkidle0" })
     const pdfBuffer = await page.pdf({ format: "A4" })
