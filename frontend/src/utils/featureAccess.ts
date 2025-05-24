@@ -1,6 +1,6 @@
 // utils/featureAccess.ts
 
-import { Plan, UsageType } from "@prisma/client";
+export type Plan = "FREEMIUM" | "BASIC" | "STANDARD" | "PREMIUM";
 
 export type Feature = {
   key: string;
