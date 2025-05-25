@@ -287,10 +287,18 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     // 5. Génération PDF
     const htmlToUse = quoteHtml || generateQuoteHtml(newQuote);
-    const executablePath = await chromium.executablePath;
+    let executablePath = await chromium.executablePath;
     console.log("chromium.executablePath =", executablePath);
     if (!executablePath) {
       throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
+    }
+    // Patch Render: si null, utilise le chemin absolu du binaire extrait
+    if (!executablePath) {
+      executablePath = path.join(
+        __dirname,
+        '../../node_modules/chrome-aws-lambda/bin/chromium'
+      );
+      console.log('ExecutablePath patch Render:', executablePath);
     }
 
     const browser = await puppeteer.launch({

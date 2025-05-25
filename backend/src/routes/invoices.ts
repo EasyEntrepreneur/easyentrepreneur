@@ -284,13 +284,21 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       console.log('Erreur lecture bin chrome-aws-lambda:', err);
     }
 
-    const executablePath = await chromium.executablePath;
+    let executablePath = await chromium.executablePath;
     console.log("chromium.executablePath =", executablePath);
 
     if (!executablePath) {
       throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
     }
 
+    if (!executablePath) {
+          executablePath = path.join(
+            __dirname,
+            '../../node_modules/chrome-aws-lambda/bin/chromium'
+          );
+          console.log('ExecutablePath patch Render:', executablePath);
+        }
+        
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath,
