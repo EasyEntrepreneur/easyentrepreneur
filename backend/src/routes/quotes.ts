@@ -288,14 +288,20 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     // 5. Génération PDF
     const htmlToUse = quoteHtml || generateQuoteHtml(newQuote);
     let executablePath = await chromium.executablePath;
-    // PATCH Render: fallback manuel
-    if (!executablePath) {
-      // Chemin absolu vers le binaire décompressé par notre script custom
-      executablePath = path.join(
+    if (!executablePath || executablePath === "/usr/bin/chromium-browser") {
+      // PATCH ABSOLU (et cross-plateforme)
+      executablePath = path.resolve(
         __dirname,
-        '../../node_modules/chrome-aws-lambda/bin/chromium'
+        "../../node_modules/chrome-aws-lambda/bin/chromium"
       );
-      console.log('PATCH Render - chromium executablePath set to:', executablePath);
+      console.log('[PATCH Render] executablePath =>', executablePath);
+
+      // Vérif finale : droit d'exécution
+      try {
+        await fs.chmod(executablePath, 0o755);
+      } catch (e) {
+        console.warn('[WARN] Impossible de chmod chromium:', e);
+      }
     }
 
     const browser = await puppeteer.launch({

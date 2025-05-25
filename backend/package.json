@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma": "prisma",
-    "install-chromium": "node ./scripts/extract-chromium.js",
+    "install-chromium": "node ./scripts/extract-chromium.js && node ./scripts/fix-chromium.js",
     "postinstall": "npm run install-chromium"
   },
   "dependencies": {
