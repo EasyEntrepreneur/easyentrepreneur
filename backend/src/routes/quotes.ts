@@ -4,8 +4,7 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import puppeteer from 'puppeteer-core';
-import chromium from 'chrome-aws-lambda';
+import { chromium as playwrightChromium } from 'playwright';
 
 const router = Router()
 

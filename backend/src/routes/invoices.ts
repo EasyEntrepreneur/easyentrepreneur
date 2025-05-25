@@ -4,8 +4,7 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import puppeteer from 'puppeteer-core'
-import chromium from 'chrome-aws-lambda'
+import { chromium as playwrightChromium } from 'playwright'
 
 const router = Router()
 
@@ -271,45 +270,12 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       include: { items: true, client: true },
     })
 
-    // 5. Génération du PDF avec chrome-aws-lambda et puppeteer-core
+    // 5. Génération du PDF via Playwright
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
-
-    // Log les fichiers dans bin pour debug
-    const fsStd = require('fs');
-    const binPath = require('path').join(process.cwd(), 'node_modules', 'chrome-aws-lambda', 'bin');
-    try {
-      const files = fsStd.readdirSync(binPath);
-      console.log('chrome-aws-lambda/bin content:', files);
-    } catch (err) {
-      console.log('Erreur lecture bin chrome-aws-lambda:', err);
-    }
-
-    let executablePath = await chromium.executablePath;
-    if (!executablePath || executablePath === "/usr/bin/chromium-browser") {
-      // PATCH ABSOLU (et cross-plateforme)
-      executablePath = path.resolve(
-        __dirname,
-        "../../node_modules/chrome-aws-lambda/bin/chromium"
-      );
-      console.log('[PATCH Render] executablePath =>', executablePath);
-
-      // Vérif finale : droit d'exécution
-      try {
-        await fs.chmod(executablePath, 0o755);
-      } catch (e) {
-        console.warn('[WARN] Impossible de chmod chromium:', e);
-      }
-    }
-
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: true,
-      ignoreDefaultArgs: ['--disable-extensions'],
-    });
+    const browser = await playwrightChromium.launch({ headless: true })
     const page = await browser.newPage()
-    await page.setContent(htmlToUse, { waitUntil: "networkidle0" })
-    const pdfBuffer = await page.pdf({ format: "a4" })
+    await page.setContent(htmlToUse, { waitUntil: "domcontentloaded" })
+    const pdfBuffer = await page.pdf({ format: "A4" })
     await browser.close()
 
     const pdfDir = path.join(__dirname, "../../invoices_pdf")
