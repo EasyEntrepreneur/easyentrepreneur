@@ -295,7 +295,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     const browser = await puppeteer.launch({
       args: chromium.args,
-      executablePath,
+      executablePath: await chromium.executablePath,
       headless: true,
       ignoreDefaultArgs: ['--disable-extensions'],
     });
