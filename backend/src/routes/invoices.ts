@@ -285,20 +285,16 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     }
 
     let executablePath = await chromium.executablePath;
-    console.log("chromium.executablePath =", executablePath);
-
+    // PATCH Render: fallback manuel
     if (!executablePath) {
-      throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
+      // Chemin absolu vers le binaire décompressé par notre script custom
+      executablePath = path.join(
+        __dirname,
+        '../../node_modules/chrome-aws-lambda/bin/chromium'
+      );
+      console.log('PATCH Render - chromium executablePath set to:', executablePath);
     }
 
-    if (!executablePath) {
-          executablePath = path.join(
-            __dirname,
-            '../../node_modules/chrome-aws-lambda/bin/chromium'
-          );
-          console.log('ExecutablePath patch Render:', executablePath);
-        }
-        
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath,

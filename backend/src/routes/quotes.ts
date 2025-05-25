@@ -288,17 +288,14 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     // 5. Génération PDF
     const htmlToUse = quoteHtml || generateQuoteHtml(newQuote);
     let executablePath = await chromium.executablePath;
-    console.log("chromium.executablePath =", executablePath);
+    // PATCH Render: fallback manuel
     if (!executablePath) {
-      throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
-    }
-    // Patch Render: si null, utilise le chemin absolu du binaire extrait
-    if (!executablePath) {
+      // Chemin absolu vers le binaire décompressé par notre script custom
       executablePath = path.join(
         __dirname,
         '../../node_modules/chrome-aws-lambda/bin/chromium'
       );
-      console.log('ExecutablePath patch Render:', executablePath);
+      console.log('PATCH Render - chromium executablePath set to:', executablePath);
     }
 
     const browser = await puppeteer.launch({
