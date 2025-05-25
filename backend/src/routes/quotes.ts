@@ -4,101 +4,90 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import { chromium as playwrightChromium } from 'playwright';
+import { chromium as playwrightChromium } from 'playwright'
 
 const router = Router()
 
 // Suppression d'un devis (avec contrôle utilisateur)
 router.delete('/:id', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const quoteId = req.params.id;
+  const userId = req.user.userId
+  const quoteId = req.params.id
   try {
-    // 1. Supprime tous les items du devis
-    await prisma.quoteItem.deleteMany({
-      where: { quoteId }
-    });
-    // 2. Supprime le devis SEULEMENT si il appartient au user
-    const result = await prisma.quote.deleteMany({
-      where: { id: quoteId, userId }
-    });
+    await prisma.quoteItem.deleteMany({ where: { quoteId } })
+    const result = await prisma.quote.deleteMany({ where: { id: quoteId, userId } })
     if (result.count === 0) {
-      return res.status(404).json({ error: "Devis introuvable ou accès refusé." });
+      return res.status(404).json({ error: "Devis introuvable ou accès refusé." })
     }
-    res.json({ success: true, id: quoteId });
+    res.json({ success: true, id: quoteId })
   } catch (error) {
-    console.error("[DELETE] Erreur suppression devis :", error);
-    res.status(500).json({ error: "Erreur lors de la suppression du devis." });
+    console.error("[DELETE] Erreur suppression devis :", error)
+    res.status(500).json({ error: "Erreur lors de la suppression du devis." })
   }
-});
+})
 
 // Suppression groupée de devis
 router.post('/bulk-delete', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const { ids } = req.body;
+  const userId = req.user.userId
+  const { ids } = req.body
   if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: "Aucun devis sélectionné" });
+    return res.status(400).json({ error: "Aucun devis sélectionné" })
   }
   try {
-    await prisma.quoteItem.deleteMany({
-      where: { quoteId: { in: ids } }
-    });
-    const result = await prisma.quote.deleteMany({
-      where: { id: { in: ids }, userId }
-    });
+    await prisma.quoteItem.deleteMany({ where: { quoteId: { in: ids } } })
+    const result = await prisma.quote.deleteMany({ where: { id: { in: ids }, userId } })
     if (result.count === 0) {
-      return res.status(404).json({ error: "Aucun devis supprimé (non trouvé ou accès refusé)." });
+      return res.status(404).json({ error: "Aucun devis supprimé (non trouvé ou accès refusé)." })
     }
-    res.json({ deleted: result.count, ids });
+    res.json({ deleted: result.count, ids })
   } catch (error) {
-    console.error("[BULK DELETE] Erreur suppression devis :", error);
-    res.status(500).json({ error: "Erreur lors de la suppression des devis." });
+    console.error("[BULK DELETE] Erreur suppression devis :", error)
+    res.status(500).json({ error: "Erreur lors de la suppression des devis." })
   }
-});
+})
 
 // GET /quotes — tous les devis du user connecté
 router.get('/', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
+  const userId = req.user.userId
   try {
     const quotes = await prisma.quote.findMany({
       where: { userId },
       include: { items: true, client: true },
-      orderBy: { issuedAt: 'desc' },
-    });
-    // Ajoute le champ pdfUrl pour chaque devis
+      orderBy: { issuedAt: 'desc' }
+    })
     const quotesWithPdfUrl = quotes.map((q: any) => ({
       ...q,
       pdfUrl: q.number ? `/quotes/${q.number}.pdf` : null
-    }));
-    res.json(quotesWithPdfUrl);
+    }))
+    res.json(quotesWithPdfUrl)
   } catch (error) {
-    console.error('Erreur GET /quotes :', error);
-    res.status(500).json({ error: 'Erreur serveur lors de la récupération des devis.' });
+    console.error('Erreur GET /quotes :', error)
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération des devis.' })
   }
-});
+})
 
 // GET /quotes/:id — un devis spécifique
 router.get('/:id', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const quoteId = req.params.id;
+  const userId = req.user.userId
+  const quoteId = req.params.id
   try {
     const quote = await prisma.quote.findFirst({
       where: { id: quoteId, userId },
-      include: { items: true, client: true },
-    });
+      include: { items: true, client: true }
+    })
     if (!quote) {
-      return res.status(404).json({ error: 'Devis introuvable.' });
+      return res.status(404).json({ error: 'Devis introuvable.' })
     }
     res.json({
       ...quote,
       pdfUrl: quote.number ? `/quotes/${quote.number}.pdf` : null
-    });
+    })
   } catch (error) {
-    console.error('Erreur GET /quotes/:id :', error);
-    res.status(500).json({ error: 'Erreur serveur lors de la récupération du devis.' });
+    console.error('Erreur GET /quotes/:id :', error)
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération du devis.' })
   }
-});
+})
 
-// --- Génération HTML fallback côté back (optionnel)
+// Génération HTML fallback côté back (optionnel)
 function generateQuoteHtml(quote: any) {
   return `
     <html>
@@ -154,27 +143,27 @@ function generateQuoteHtml(quote: any) {
         <div style="margin-top:24px; font-size:12px;">${quote.notes || ""}</div>
       </body>
     </html>
-  `;
+  `
 }
 
 // POST /quotes — création d'un devis
 router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
-  const userId = req.user.userId;
+  const userId = req.user.userId
   const {
     client,
     validUntil,
     items,
     quoteHtml,
     ...rest
-  } = req.body;
+  } = req.body
 
   try {
     // 1. Récupère ou crée le client
-    let dbClient = null;
+    let dbClient = null
     if (client.siret) {
       dbClient = await prisma.client.findFirst({
         where: { userId, siret: client.siret }
-      });
+      })
     }
     if (!dbClient) {
       dbClient = await prisma.client.findFirst({
@@ -185,7 +174,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
           zip: client.zip,
           city: client.city,
         }
-      });
+      })
     }
     if (!dbClient) {
       const clientToInsert = {
@@ -197,59 +186,59 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
         vat: client.vat || "",
         phone: client.phone || "",
         userId
-      };
-      dbClient = await prisma.client.create({ data: clientToInsert });
+      }
+      dbClient = await prisma.client.create({ data: clientToInsert })
     }
 
     // 2. Génération numéro unique pour le devis (par année)
-    const year = new Date().getFullYear();
-    const regex = new RegExp(`^${year}-(\\d{3})$`);
+    const year = new Date().getFullYear()
+    const regex = new RegExp(`^${year}-(\\d{3})$`)
     const quotesThisYear = await prisma.quote.findMany({
       where: {
         userId,
         number: { startsWith: `${year}-` }
       },
       select: { number: true }
-    });
-    let nextNumber = 1;
+    })
+    let nextNumber = 1
     if (quotesThisYear.length > 0) {
       const nums = quotesThisYear
         .map((q: any) => {
-          const match = q.number.match(regex);
-          return match ? parseInt(match[1], 10) : 0;
+          const match = q.number.match(regex)
+          return match ? parseInt(match[1], 10) : 0
         })
-        .filter((n: number) => !isNaN(n));
+        .filter((n: number) => !isNaN(n))
       if (nums.length > 0) {
-        nextNumber = Math.max(...nums) + 1;
+        nextNumber = Math.max(...nums) + 1
       }
     }
-    let number = `${year}-${String(nextNumber).padStart(3, '0')}`;
+    let number = `${year}-${String(nextNumber).padStart(3, '0')}`
 
-    let exists = await prisma.quote.findUnique({ where: { number } });
-    let tries = 0;
-    const maxTries = 10;
+    let exists = await prisma.quote.findUnique({ where: { number } })
+    let tries = 0
+    const maxTries = 10
     while (exists && tries < maxTries) {
-      nextNumber++;
-      number = `${year}-${String(nextNumber).padStart(3, '0')}`;
-      exists = await prisma.quote.findUnique({ where: { number } });
-      if (!exists) break;
-      tries++;
+      nextNumber++
+      number = `${year}-${String(nextNumber).padStart(3, '0')}`
+      exists = await prisma.quote.findUnique({ where: { number } })
+      if (!exists) break
+      tries++
     }
     if (tries === maxTries && exists) {
-      return res.status(500).json({ error: "Impossible de générer un numéro de devis unique. Veuillez réessayer." });
+      return res.status(500).json({ error: "Impossible de générer un numéro de devis unique. Veuillez réessayer." })
     }
 
     // 3. Calcul des totaux (identique à invoice)
-    let totalHT = 0;
-    let totalTVA = 0;
-    let totalTTC = 0;
+    let totalHT = 0
+    let totalTVA = 0
+    let totalTTC = 0
     const quoteItems = items.map((item: any) => {
-      const ht = item.unitPrice * item.quantity;
-      const tva = ht * (item.vatRate / 100);
-      const ttc = ht + tva;
-      totalHT += ht;
-      totalTVA += tva;
-      totalTTC += ttc;
+      const ht = item.unitPrice * item.quantity
+      const tva = ht * (item.vatRate / 100)
+      const ttc = ht + tva
+      totalHT += ht
+      totalTVA += tva
+      totalTTC += ttc
       return {
         description: item.description,
         quantity: item.quantity,
@@ -259,7 +248,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
         totalTVA: tva,
         totalTTC: ttc,
       }
-    });
+    })
 
     // 4. Création du devis
     let newQuote = await prisma.quote.create({
@@ -282,99 +271,77 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
         items: { createMany: { data: quoteItems } },
       },
       include: { items: true, client: true },
-    });
+    })
 
-    // 5. Génération PDF
-    const htmlToUse = quoteHtml || generateQuoteHtml(newQuote);
-    let executablePath = await chromium.executablePath;
-    if (!executablePath || executablePath === "/usr/bin/chromium-browser") {
-      // PATCH ABSOLU (et cross-plateforme)
-      executablePath = path.resolve(
-        __dirname,
-        "../../node_modules/chrome-aws-lambda/bin/chromium"
-      );
-      console.log('[PATCH Render] executablePath =>', executablePath);
+    // 5. Génération PDF via Playwright
+    const htmlToUse = quoteHtml || generateQuoteHtml(newQuote)
+    const browser = await playwrightChromium.launch({ headless: true })
+    const page = await browser.newPage()
+    await page.setContent(htmlToUse, { waitUntil: "domcontentloaded" })
+    const pdfBuffer = await page.pdf({ format: "A4" })
+    await browser.close()
 
-      // Vérif finale : droit d'exécution
-      try {
-        await fs.chmod(executablePath, 0o755);
-      } catch (e) {
-        console.warn('[WARN] Impossible de chmod chromium:', e);
-      }
-    }
-
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: true,
-      ignoreDefaultArgs: ['--disable-extensions'],
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlToUse, { waitUntil: "networkidle0" });
-    const pdfBuffer = await page.pdf({ format: "a4" });
-    await browser.close();
-
-    const pdfDir = path.join(__dirname, "../../quotes_pdf");
-    await fs.mkdir(pdfDir, { recursive: true });
-    const pdfFilename = `${newQuote.number}.pdf`;
-    const pdfPath = path.join(pdfDir, pdfFilename);
-    await fs.writeFile(pdfPath, pdfBuffer);
+    const pdfDir = path.join(__dirname, "../../quotes_pdf")
+    await fs.mkdir(pdfDir, { recursive: true })
+    const pdfFilename = `${newQuote.number}.pdf`
+    const pdfPath = path.join(pdfDir, pdfFilename)
+    await fs.writeFile(pdfPath, pdfBuffer)
 
     // Met à jour le devis avec le PDF
     newQuote = await prisma.quote.update({
       where: { id: newQuote.id },
       data: { pdfPath: pdfFilename },
       include: { items: true, client: true },
-    });
+    })
 
     res.status(201).json({
       ...newQuote,
       pdfUrl: `/quotes/${newQuote.number}.pdf`
-    });
+    })
   } catch (error) {
-    console.error('Erreur POST /quotes :', error);
-    res.status(500).json({ error: 'Erreur serveur lors de la création du devis.' });
+    console.error('Erreur POST /quotes :', error)
+    res.status(500).json({ error: 'Erreur serveur lors de la création du devis.' })
   }
-});
+})
 
 // PATCH /quotes/:id/statut — Changer le statut du devis
 router.patch('/:id/statut', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const quoteId = req.params.id;
-  const { statut } = req.body;
-  const allowedStatuts = ["ACCEPTE", "EN_ATTENTE", "REFUSE"];
+  const userId = req.user.userId
+  const quoteId = req.params.id
+  const { statut } = req.body
+  const allowedStatuts = ["ACCEPTE", "EN_ATTENTE", "REFUSE"]
   if (!allowedStatuts.includes(statut)) {
-    return res.status(400).json({ error: "Statut invalide" });
+    return res.status(400).json({ error: "Statut invalide" })
   }
   try {
     const quote = await prisma.quote.update({
       where: { id: quoteId, userId },
       data: { statut },
-    });
-    if (!quote) return res.status(404).json({ error: "Devis introuvable" });
-    res.json({ success: true });
+    })
+    if (!quote) return res.status(404).json({ error: "Devis introuvable" })
+    res.json({ success: true })
   } catch (err) {
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ error: "Erreur serveur" })
   }
-});
+})
 
 // GET /quotes/:number/pdf — Télécharge le PDF du devis par numéro
 router.get('/:number/pdf', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const quoteNumber = req.params.number;
+  const userId = req.user.userId
+  const quoteNumber = req.params.number
 
   const quote = await prisma.quote.findFirst({
     where: { number: quoteNumber, userId }
-  });
+  })
 
   if (!quote || !quote.pdfPath) {
-    return res.status(404).json({ error: "PDF non trouvé" });
+    return res.status(404).json({ error: "PDF non trouvé" })
   }
 
-  const pdfFilePath = path.join(__dirname, "../../quotes_pdf", quote.pdfPath);
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="Devis-${quote.number}.pdf"`);
-  res.sendFile(path.resolve(pdfFilePath));
-});
+  const pdfFilePath = path.join(__dirname, "../../quotes_pdf", quote.pdfPath)
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", `inline; filename="Devis-${quote.number}.pdf"`)
+  res.sendFile(path.resolve(pdfFilePath))
+})
 
-export default router;
+export default router
