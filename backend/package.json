@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma": "prisma",
-    "postinstall": "npx playwright install --with-deps"
+    "postinstall": "npx playwright install"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",
