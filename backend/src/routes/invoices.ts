@@ -299,7 +299,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     });
     const page = await browser.newPage()
     await page.setContent(htmlToUse, { waitUntil: "networkidle0" })
-    const pdfBuffer = await page.pdf({ format: "A4" })
+    const pdfBuffer = await page.pdf({ format: "a4" })
     await browser.close()
 
     const pdfDir = path.join(__dirname, "../../invoices_pdf")
