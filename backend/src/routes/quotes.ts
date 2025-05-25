@@ -275,7 +275,16 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
 
     // 5. Génération PDF via Playwright
     const htmlToUse = quoteHtml || generateQuoteHtml(newQuote)
-    const browser = await playwrightChromium.launch({ headless: true })
+    const browser = await playwrightChromium.launch({
+      // **Ajouter ce paramètre**
+      executablePath: '/opt/render/.cache/ms-playwright/chromium-1169/chrome-linux/chrome', // chemin ABSOLU du chrome complet
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage"
+      ]
+    });
     const page = await browser.newPage()
     await page.setContent(htmlToUse, { waitUntil: "domcontentloaded" })
     const pdfBuffer = await page.pdf({ format: "A4" })
