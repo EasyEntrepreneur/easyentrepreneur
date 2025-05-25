@@ -1,62 +1,50 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
 import { authenticateToken } from '../middlewares/authenticateToken'
-import { checkDocumentQuota } from '../middlewares/checkDocumentQuota';
+import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import puppeteer from 'puppeteer-core';
-import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core'
+import chromium from 'chrome-aws-lambda'
 
 const router = Router()
 
 // Suppression d'une facture (avec contrôle utilisateur)
 router.delete('/:id', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const invoiceId = req.params.id;
+  const userId = req.user.userId
+  const invoiceId = req.params.id
   try {
-    // 1. Supprime d'abord tous les items de la facture (sécurité FK)
-    await prisma.invoiceItem.deleteMany({
-      where: { invoiceId }
-    });
-    // 2. Supprime la facture SEULEMENT si elle appartient à l'utilisateur
-    const result = await prisma.invoice.deleteMany({
-      where: { id: invoiceId, userId }
-    });
+    await prisma.invoiceItem.deleteMany({ where: { invoiceId } })
+    const result = await prisma.invoice.deleteMany({ where: { id: invoiceId, userId } })
     if (result.count === 0) {
-      return res.status(404).json({ error: "Facture introuvable ou accès refusé." });
+      return res.status(404).json({ error: "Facture introuvable ou accès refusé." })
     }
-    res.json({ success: true, id: invoiceId });
+    res.json({ success: true, id: invoiceId })
   } catch (error) {
-    console.error("[DELETE] Erreur suppression facture :", error);
-    res.status(500).json({ error: "Erreur lors de la suppression de la facture." });
+    console.error("[DELETE] Erreur suppression facture :", error)
+    res.status(500).json({ error: "Erreur lors de la suppression de la facture." })
   }
-});
+})
 
 // Suppression groupée de factures
 router.post('/bulk-delete', authenticateToken, async (req, res) => {
-  const userId = req.user.userId;
-  const { ids } = req.body; // tableau d'ids
+  const userId = req.user.userId
+  const { ids } = req.body
   if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: "Aucune facture sélectionnée" });
+    return res.status(400).json({ error: "Aucune facture sélectionnée" })
   }
   try {
-    // 1. Supprime tous les items liés à ces factures
-    await prisma.invoiceItem.deleteMany({
-      where: { invoiceId: { in: ids } }
-    });
-    // 2. Supprime toutes les factures appartenant à ce user
-    const result = await prisma.invoice.deleteMany({
-      where: { id: { in: ids }, userId }
-    });
+    await prisma.invoiceItem.deleteMany({ where: { invoiceId: { in: ids } } })
+    const result = await prisma.invoice.deleteMany({ where: { id: { in: ids }, userId } })
     if (result.count === 0) {
-      return res.status(404).json({ error: "Aucune facture supprimée (non trouvée ou accès refusé)." });
+      return res.status(404).json({ error: "Aucune facture supprimée (non trouvée ou accès refusé)." })
     }
-    res.json({ deleted: result.count, ids });
+    res.json({ deleted: result.count, ids })
   } catch (error) {
-    console.error("[BULK DELETE] Erreur suppression factures :", error);
-    res.status(500).json({ error: "Erreur lors de la suppression des factures." });
+    console.error("[BULK DELETE] Erreur suppression factures :", error)
+    res.status(500).json({ error: "Erreur lors de la suppression des factures." })
   }
-});
+})
 
 // GET /invoices — toutes les factures du user connecté
 router.get('/', authenticateToken, async (req, res) => {
@@ -65,10 +53,9 @@ router.get('/', authenticateToken, async (req, res) => {
     const invoices = await prisma.invoice.findMany({
       where: { userId },
       include: { items: true, client: true },
-      orderBy: { issuedAt: 'desc' },
+      orderBy: { issuedAt: 'desc' }
     })
-    // Ajoute le champ pdfUrl pour chaque facture (utilisé côté front)
-    const invoicesWithPdfUrl = invoices.map((inv: { number: any }) => ({
+    const invoicesWithPdfUrl = invoices.map((inv: any) => ({
       ...inv,
       pdfUrl: inv.number ? `/invoices/${inv.number}.pdf` : null
     }))
@@ -86,12 +73,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const invoice = await prisma.invoice.findFirst({
       where: { id: invoiceId, userId },
-      include: { items: true, client: true },
+      include: { items: true, client: true }
     })
     if (!invoice) {
       return res.status(404).json({ error: 'Facture introuvable.' })
     }
-    // Ajoute le champ pdfUrl pour le front
     res.json({
       ...invoice,
       pdfUrl: invoice.number ? `/invoices/${invoice.number}.pdf` : null
@@ -102,7 +88,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-// --- UTILITY : Optionnel, fallback de génération HTML côté back (pour tests)
+// UTILITY: fallback HTML
 function generateInvoiceHtml(invoice: any) {
   return `
     <html>
@@ -177,9 +163,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     // 1. Récupère ou crée le client (inchangé)
     let dbClient = null
     if (client.siret) {
-      dbClient = await prisma.client.findFirst({
-        where: { userId, siret: client.siret }
-      })
+      dbClient = await prisma.client.findFirst({ where: { userId, siret: client.siret } })
     }
     if (!dbClient) {
       dbClient = await prisma.client.findFirst({
@@ -207,49 +191,41 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     }
 
     // 2. Génération d'un numéro de facture unique **robuste**
-    const year = new Date().getFullYear();
-    const regex = new RegExp(`^${year}-(\\d{3})$`);
-
-    // Cherche tous les numéros pour l'année en cours
+    const year = new Date().getFullYear()
+    const regex = new RegExp(`^${year}-(\\d{3})$`)
     const invoicesThisYear = await prisma.invoice.findMany({
-      where: {
-        userId,
-        number: { startsWith: `${year}-` }
-      },
+      where: { userId, number: { startsWith: `${year}-` } },
       select: { number: true }
-    });
+    })
 
-    // Trouve le plus grand numéro de la série
-    let nextNumber = 1;
+    let nextNumber = 1
     if (invoicesThisYear.length > 0) {
       const nums = invoicesThisYear
         .map((inv: any) => {
-          const match = inv.number.match(regex);
-          return match ? parseInt(match[1], 10) : 0;
+          const match = inv.number.match(regex)
+          return match ? parseInt(match[1], 10) : 0
         })
-        .filter((n: number) => !isNaN(n));
+        .filter((n: number) => !isNaN(n))
       if (nums.length > 0) {
-        nextNumber = Math.max(...nums) + 1;
+        nextNumber = Math.max(...nums) + 1
       }
     }
-    let number = `${year}-${String(nextNumber).padStart(3, '0')}`;
-
-    // Vérifie l'unicité (boucle ultra-rare)
-    let exists = await prisma.invoice.findUnique({ where: { number } });
-    let tries = 0;
-    const maxTries = 10;
+    let number = `${year}-${String(nextNumber).padStart(3, '0')}`
+    let exists = await prisma.invoice.findUnique({ where: { number } })
+    let tries = 0
+    const maxTries = 10
     while (exists && tries < maxTries) {
-      nextNumber++;
-      number = `${year}-${String(nextNumber).padStart(3, '0')}`;
-      exists = await prisma.invoice.findUnique({ where: { number } });
-      if (!exists) break;
-      tries++;
+      nextNumber++
+      number = `${year}-${String(nextNumber).padStart(3, '0')}`
+      exists = await prisma.invoice.findUnique({ where: { number } })
+      if (!exists) break
+      tries++
     }
     if (tries === maxTries && exists) {
-      return res.status(500).json({ error: "Impossible de générer un numéro de facture unique. Veuillez réessayer." });
+      return res.status(500).json({ error: "Impossible de générer un numéro de facture unique. Veuillez réessayer." })
     }
 
-    // 3. Calcul des totaux (inchangé)
+    // 3. Calcul des totaux
     let totalHT = 0
     let totalTVA = 0
     let totalTTC = 0
@@ -271,7 +247,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       }
     })
 
-    // 4. Création en base (inchangé sauf number utilisé)
+    // 4. Création en base
     let newInvoice = await prisma.invoice.create({
       data: {
         number,
@@ -295,12 +271,22 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       include: { items: true, client: true },
     })
 
-    // 5. Génération du PDF (inchangé)
+    // 5. Génération du PDF avec chrome-aws-lambda et puppeteer-core
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
+
+    // Log les fichiers dans bin pour debug
+    const fsStd = require('fs');
+    const binPath = require('path').join(process.cwd(), 'node_modules', 'chrome-aws-lambda', 'bin');
+    try {
+      const files = fsStd.readdirSync(binPath);
+      console.log('chrome-aws-lambda/bin content:', files);
+    } catch (err) {
+      console.log('Erreur lecture bin chrome-aws-lambda:', err);
+    }
+
     const executablePath = await chromium.executablePath;
     console.log("chromium.executablePath =", executablePath);
-    console.log('chromium.executablePath', await chromium.executablePath);
-    console.log('process.platform', process.platform, 'arch', process.arch, 'env', process.env.AWS_EXECUTION_ENV);
+
     if (!executablePath) {
       throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
     }
@@ -321,9 +307,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     const pdfFilename = `${newInvoice.number}.pdf`
     const pdfPath = path.join(pdfDir, pdfFilename)
     await fs.writeFile(pdfPath, pdfBuffer)
-    const pdfUrl = `/invoices/${newInvoice.number}.pdf`
-    
-    // Met à jour la facture avec le PDF
+
     newInvoice = await prisma.invoice.update({
       where: { id: newInvoice.id },
       data: { pdfPath: pdfFilename },
@@ -345,8 +329,7 @@ router.patch('/:id/statut', authenticateToken, async (req, res) => {
   const userId = req.user.userId
   const invoiceId = req.params.id
   const { statut } = req.body
-  // On ne valide QUE les valeurs enum
-  const allowedStatuts = ["PAYEE", "EN_ATTENTE", "ANNULE"];
+  const allowedStatuts = ["PAYEE", "EN_ATTENTE", "ANNULE"]
   if (!allowedStatuts.includes(statut)) {
     return res.status(400).json({ error: "Statut invalide" })
   }
@@ -362,12 +345,11 @@ router.patch('/:id/statut', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /invoices/number/:number/pdf — Télécharge le PDF par numéro (ex: 2024-043)
+// GET /invoices/number/:number/pdf — Télécharge le PDF par numéro
 router.get('/:id/pdf', authenticateToken, async (req, res) => {
   const userId = req.user.userId
-  const invoiceNumber = req.params.id // c'est bien le NUMERO de facture ici (ex: 2024-045)
+  const invoiceNumber = req.params.id
 
-  // Cherche la facture par number et userId
   const invoice = await prisma.invoice.findFirst({
     where: { number: invoiceNumber, userId }
   })
