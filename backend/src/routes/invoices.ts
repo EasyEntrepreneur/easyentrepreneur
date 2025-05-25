@@ -299,6 +299,8 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
     const executablePath = await chromium.executablePath;
     console.log("chromium.executablePath =", executablePath);
+    console.log('chromium.executablePath', await chromium.executablePath);
+    console.log('process.platform', process.platform, 'arch', process.arch, 'env', process.env.AWS_EXECUTION_ENV);
     if (!executablePath) {
       throw new Error("Chromium executablePath not found! Check chrome-aws-lambda install.");
     }
