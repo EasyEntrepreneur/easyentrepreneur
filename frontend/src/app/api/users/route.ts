@@ -1,6 +1,7 @@
 import express from 'express';
 import { getUserInfo } from '../../../../backend/src/controllers/userController';
-import { authenticateToken } from '../../../../backend/src/middlewares/authenticateToken';
+import { authenticateToken } from '@/lib/middlewares/authenticateToken';
+
 
 const userRoutes = express.Router();
 

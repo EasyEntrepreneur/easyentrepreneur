@@ -1,6 +1,7 @@
 import express from 'express';
 import { saveBillingInfo } from '../../../../backend/src/controllers/billingController';
-import { authenticateToken } from '../../../../backend/src/middlewares/authenticateToken';
+import { authenticateToken } from '@/lib/middlewares/authenticateToken';
+
 
 const router = express.Router();
 

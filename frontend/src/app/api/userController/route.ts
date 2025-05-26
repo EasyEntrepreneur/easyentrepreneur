@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '@/lib/prisma';
-import { AuthenticatedRequest } from '../../../lib/middlewares/authenticateToken';
+import { AuthenticatedRequest } from '@/lib/middlewares/authenticateToken';
 
 export const getUserInfo = async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user?.userId;

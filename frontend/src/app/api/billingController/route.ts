@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '@/lib/prisma';
-import { AuthenticatedRequest } from '../../../lib/middlewares/authenticateToken';
+import { AuthenticatedRequest } from '@/lib/middlewares/authenticateToken';
+
 
 export const saveBillingInfo = async (req: AuthenticatedRequest, res: Response) => {
   try {

@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import prisma from '@/lib/prisma';
-import { AuthenticatedRequest } from '../middlewares/authenticateToken';
+import { AuthenticatedRequest } from '@/lib/middlewares/authenticateToken';
 
 /**
  * Middleware to enforce a 5-document-per-month limit on FREEMIUM users.

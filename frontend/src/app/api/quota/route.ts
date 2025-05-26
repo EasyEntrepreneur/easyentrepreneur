@@ -1,6 +1,6 @@
 // backend/src/routes/quota.ts
 import { Router } from "express";
-import { authenticateToken } from "../../../../backend/src/middlewares/authenticateToken";
+import { authenticateToken } from '@/lib/middlewares/authenticateToken';
 import prisma from '@/lib/prisma';
 
 const router = Router();

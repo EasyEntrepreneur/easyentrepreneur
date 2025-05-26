@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import prisma from '@/lib/prisma';
-import { authenticateToken } from '../../../../backend/src/middlewares/authenticateToken'
+import { authenticateToken } from '@/lib/middlewares/authenticateToken';
 import { checkDocumentQuota } from '../../../../backend/src/middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
