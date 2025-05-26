@@ -5,7 +5,7 @@ import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
 import PDFDocument from 'pdfkit'
-import fsSync from 'fs'
+import * as fsSync from 'fs';
 
 const router = Router()
 
@@ -88,84 +88,82 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-// Génération PDF avec PDFKit pour un devis
+const LIGHT_BLUE = "#E3F0FF"; // Bleu clair
+
+function formatEuro(val: number) {
+  return val.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+}
+
 function generateQuotePdf(quote: any, pdfPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 40 });
-      const writeStream = fsSync.createWriteStream(pdfPath);
-      doc.pipe(writeStream);
+      const stream = fsSync.createWriteStream(pdfPath);
+      doc.pipe(stream);
 
-      // Header : LOGO/TITRE
-      doc.fontSize(20).font('Helvetica-Bold').text('DEVIS', 40, 40, { align: 'left' });
-      doc.fontSize(10).font('Helvetica').text(`N° ${quote.number}`, 40, 65, { align: 'left' });
-
-      // Infos émetteur (à GAUCHE)
-      doc.fontSize(11).font('Helvetica-Bold').text('Émetteur :', 40, 100);
+      // --- Client à gauche
+      doc.font('Helvetica-Bold').fontSize(11).text(quote.clientName, 40, 40);
       doc.font('Helvetica').fontSize(10)
-        .text('EasyEntrepreneur', 40, 115)
-        .text('Adresse émetteur', 40, 130)
-        .text('Email', 40, 145)
-        .text('Téléphone', 40, 160);
+        .text(quote.clientAddress, 40, 55)
+        .text(`${quote.clientZip || ''} ${quote.clientCity || ''}`, 40, 70)
+      if (quote.clientSiret) doc.font('Helvetica-Bold').text('Siret :', 40, 85, { continued: true }).font('Helvetica').text(quote.clientSiret || '', undefined, undefined);
 
-      // Infos client (à DROITE)
-      doc.fontSize(11).font('Helvetica-Bold').text('Client :', 350, 100);
+      // Prestataire à droite (remplace ces champs par les tiens si besoin)
+      const rightX = 320;
+      doc.font('Helvetica-Bold').fontSize(11).text(quote.providerName || "Votre entreprise", rightX, 40);
       doc.font('Helvetica').fontSize(10)
-        .text(quote.clientName, 350, 115)
-        .text(quote.clientAddress, 350, 130)
-        .text(`${quote.clientZip} ${quote.clientCity}`, 350, 145)
-        .text(quote.clientEmail || '', 350, 160)
-        .text(quote.clientPhone || '', 350, 175);
+        .text(quote.providerAddress || "Adresse prestataire", rightX, 55)
+        .text(quote.providerZip && quote.providerCity ? `${quote.providerZip} ${quote.providerCity}` : '', rightX, 70)
+      if (quote.providerSiret)
+        doc.font('Helvetica-Bold').text('Siret :', rightX, 85, { continued: true }).font('Helvetica').text(quote.providerSiret, undefined, undefined);
 
-      // Date validité (centré sous header)
-      doc.fontSize(11).text(
-        `Émis le : ${quote.issuedAt ? new Date(quote.issuedAt).toLocaleDateString() : ''}` +
-        (quote.validUntil ? ` | Valide jusqu'au : ${new Date(quote.validUntil).toLocaleDateString()}` : ''),
-        0, 195, { align: 'center' }
-      );
+      // Numéro du devis (titre centré)
+      doc.font('Helvetica').fontSize(12).text(`Devis N°${quote.number || ''}`, 0, 40, { align: 'center' });
 
-      // Tableau des prestations
-      const tableTop = 220;
-      doc.moveTo(40, tableTop).lineTo(555, tableTop).stroke();
-      doc.font('Helvetica-Bold').fontSize(10);
-      doc.text('Description', 45, tableTop + 5, { width: 200 });
-      doc.text('Qté', 255, tableTop + 5, { width: 40, align: 'right' });
-      doc.text('PU HT', 310, tableTop + 5, { width: 60, align: 'right' });
-      doc.text('TVA', 375, tableTop + 5, { width: 50, align: 'right' });
-      doc.text('Total HT', 440, tableTop + 5, { width: 80, align: 'right' });
-      doc.font('Helvetica');
-      doc.moveTo(40, tableTop + 23).lineTo(555, tableTop + 23).stroke();
+      // --- Date du devis (bandeau bleu clair)
+      doc.rect(40, 120, 515, 28).fill(LIGHT_BLUE).stroke();
+      doc.fillColor('#222').font('Helvetica-Bold').fontSize(10).text('Date du devis', 50, 128);
+      doc.font('Helvetica').text(quote.issuedAt ? new Date(quote.issuedAt).toLocaleDateString('fr-FR') : '', 160, 128);
 
-      // Lignes du tableau
-      let y = tableTop + 30;
-      quote.items.forEach((item: any) => {
-        doc.text(item.description, 45, y, { width: 200 });
-        doc.text(item.quantity, 255, y, { width: 40, align: 'right' });
-        doc.text(item.unitPrice.toFixed(2) + ' €', 310, y, { width: 60, align: 'right' });
-        doc.text((item.vatRate || 0).toFixed(2) + ' %', 375, y, { width: 50, align: 'right' });
-        doc.text(item.totalHT.toFixed(2) + ' €', 440, y, { width: 80, align: 'right' });
-        y += 20;
+      // --- Tableau des prestations
+      const tableY = 170;
+      doc.fillColor(LIGHT_BLUE).rect(40, tableY, 515, 26).fill();
+      doc.fillColor('#222');
+      doc.font('Helvetica-Bold').fontSize(10)
+        .text('Description', 45, tableY + 8)
+        .text('Quantité', 295, tableY + 8, { width: 60, align: 'right' })
+        .text('Prix unitaire HT', 360, tableY + 8, { width: 90, align: 'right' })
+        .text('Prix total HT', 455, tableY + 8, { width: 90, align: 'right' });
+
+      let y = tableY + 26;
+      quote.items.forEach((item: any, i: number) => {
+        doc.fillColor(i % 2 ? "#fff" : "#f5f7fa"); // Alternance
+        doc.rect(40, y, 515, 26).fill();
+        doc.fillColor('#222');
+        doc.font('Helvetica-Bold').fontSize(10).text(item.description, 45, y + 3, { width: 220 });
+        if (item.longDescription) {
+          doc.font('Helvetica').fontSize(9).text(item.longDescription, 45, y + 16, { width: 220 });
+        }
+        doc.font('Helvetica').fontSize(10)
+          .text(item.quantity, 295, y + 3, { width: 60, align: 'right' })
+          .text(formatEuro(item.unitPrice), 360, y + 3, { width: 90, align: 'right' })
+          .text(formatEuro(item.totalHT), 455, y + 3, { width: 90, align: 'right' });
+        y += 26;
       });
 
-      // Totaux
+      // --- Total HT (case bleue à droite)
       y += 10;
-      doc.font('Helvetica-Bold').text('Total HT :', 375, y, { width: 80, align: 'right' });
-      doc.font('Helvetica').text(quote.totalHT.toFixed(2) + ' €', 460, y, { width: 60, align: 'right' });
-      y += 15;
-      doc.font('Helvetica-Bold').text('TVA :', 375, y, { width: 80, align: 'right' });
-      doc.font('Helvetica').text(quote.totalTVA.toFixed(2) + ' €', 460, y, { width: 60, align: 'right' });
-      y += 15;
-      doc.font('Helvetica-Bold').text('Total TTC :', 375, y, { width: 80, align: 'right' });
-      doc.font('Helvetica').text(quote.totalTTC.toFixed(2) + ' €', 460, y, { width: 60, align: 'right' });
+      doc.fillColor(LIGHT_BLUE).rect(360, y, 195, 24).fill();
+      doc.fillColor('#222');
+      doc.font('Helvetica-Bold').text('Total HT', 365, y + 7);
+      doc.font('Helvetica').text(formatEuro(quote.totalHT), 500, y + 7, { align: 'right', width: 50 });
 
-      // Notes (en bas centré)
-      if (quote.notes) {
-        doc.font('Helvetica').fontSize(10).text(quote.notes, 40, y + 40, { align: 'center', width: 515 });
-      }
+      // --- Mention en bas centré
+      doc.fontSize(10).fillColor('#555').text("TVA non applicable, art. 293B du CGI", 0, y + 40, { align: 'center' });
 
       doc.end();
-      writeStream.on('finish', () => resolve());
-      writeStream.on('error', reject);
+      stream.on('finish', () => resolve());
+      stream.on('error', reject);
     } catch (err) {
       reject(err);
     }
