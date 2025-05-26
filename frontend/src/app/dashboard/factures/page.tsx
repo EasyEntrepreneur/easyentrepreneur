@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react'
 import styles from './factures.module.css'
 import toast from "react-hot-toast"
-import RevenueChart from '@/components/RevenueChart';
+import RevenueChart from '@/components/RevenueChart'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import html2pdf from 'html2pdf.js'
 
-type InvoiceStatus = 'PAYEE' | 'EN_ATTENTE' | 'ANNULE';
+type InvoiceStatus = 'PAYEE' | 'EN_ATTENTE' | 'ANNULE'
 
 const STATUT_LABELS: Record<InvoiceStatus, string> = {
   PAYEE: 'Payée',
   EN_ATTENTE: 'En attente',
   ANNULE: 'Annulée'
-};
+}
 
 type Facture = {
   id: string
@@ -19,7 +22,6 @@ type Facture = {
   clientName: string
   issuedAt: string
   totalTTC: number
-  pdfUrl: string
   statut: InvoiceStatus
 }
 
@@ -27,64 +29,54 @@ type QuotaInfo = {
   used: number
   max: number
   offer: string
-};
+}
 
 const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'PAYEE', label: 'Payée' },
   { value: 'EN_ATTENTE', label: 'En attente' },
   { value: 'ANNULE', label: 'Annulée' }
-];
+]
 
-// ---- FONCTIONS INTERNES ----
-
-const handleDownloadPdf = async (number: string) => {
-  const token = localStorage.getItem("token");
+// ----- PDF AVEC html2pdf.js -----
+const handleDownloadPdfHtml2Pdf = async (id: string, number: string) => {
+  const token = localStorage.getItem("token")
   if (!token) {
-    toast.error("Veuillez vous reconnecter");
-    return;
+    toast.error("Veuillez vous reconnecter")
+    return
   }
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${number}/pdf`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Erreur lors du téléchargement du PDF");
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Facture-${number}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (e) {
-    toast.error("Impossible de télécharger le PDF");
-  }
-};
+    // On va chercher le HTML brut de la facture
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!res.ok) throw new Error("Impossible de récupérer la facture")
+    const data = await res.json()
+    if (!data.invoiceHtml) {
+      toast.error("Impossible de générer le PDF (HTML manquant)")
+      return
+    }
 
-const handleShowPdf = async (number: string) => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    toast.error("Veuillez vous reconnecter");
-    return;
-  }
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${number}/pdf`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Erreur lors du téléchargement du PDF");
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+    // Création d'un élément caché temporaire
+    const container = document.createElement('div')
+    container.style.position = 'fixed'
+    container.style.left = '-99999px'
+    container.innerHTML = data.invoiceHtml
+    document.body.appendChild(container)
+
+    await html2pdf()
+      .from(container)
+      .set({
+        filename: `Facture-${number}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { format: 'a4' }
+      })
+      .save()
+
+    document.body.removeChild(container)
   } catch (e) {
-    toast.error("Impossible d'ouvrir le PDF");
+    toast.error("Erreur lors de la génération du PDF")
   }
-};
+}
 
 function showConfirmToast(message: string, onConfirm: () => void) {
   toast(
@@ -97,8 +89,8 @@ function showConfirmToast(message: string, onConfirm: () => void) {
               background: "#ef4444", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
             }}
             onClick={() => {
-              toast.dismiss(t.id);
-              onConfirm();
+              toast.dismiss(t.id)
+              onConfirm()
             }}
           >
             Oui, supprimer
@@ -115,15 +107,15 @@ function showConfirmToast(message: string, onConfirm: () => void) {
       </span>
     ),
     { duration: 6000 }
-  );
+  )
 }
 
 function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const toastData = sessionStorage.getItem("showInvoiceToast");
+      const toastData = sessionStorage.getItem("showInvoiceToast")
       if (toastData) {
-        const { number } = JSON.parse(toastData);
+        const { number } = JSON.parse(toastData)
         if (number) {
           toast.success(
             <span>
@@ -144,181 +136,170 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
               </button>
             </span>,
             { duration: 7000 }
-          );
+          )
         } else {
-          toast.success("Facture générée avec succès !");
+          toast.success("Facture générée avec succès !")
         }
-        sessionStorage.removeItem("showInvoiceToast");
+        sessionStorage.removeItem("showInvoiceToast")
       }
     }
-  }, [handleShowPdf]);
+  }, [handleShowPdf])
 }
 
 // ------------- PAGE -------------
 export default function FacturesPage() {
-  const [factures, setFactures] = useState<Facture[]>([]);
-  const [search, setSearch] = useState('');
-  const [filtreStatut, setFiltreStatut] = useState<'Tous' | InvoiceStatus>('Tous');
-  const [loading, setLoading] = useState(true);
-  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
-
-  const [quota, setQuota] = useState<QuotaInfo | null>(null);
-
-  const [selected, setSelected] = useState<string[]>([]);
+  const [factures, setFactures] = useState<Facture[]>([])
+  const [search, setSearch] = useState('')
+  const [filtreStatut, setFiltreStatut] = useState<'Tous' | InvoiceStatus>('Tous')
+  const [loading, setLoading] = useState(true)
+  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null)
+  const [quota, setQuota] = useState<QuotaInfo | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
 
   useEffect(() => {
-    // Récupère quota dès l'arrivée sur la page
     const fetchQuota = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token")
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quota`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        setQuota(data);
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!res.ok) throw new Error()
+        const data = await res.json()
+        setQuota(data)
       } catch {
-        setQuota(null);
+        setQuota(null)
       }
-    };
-    fetchQuota();
-  }, []);
+    }
+    fetchQuota()
+  }, [])
 
   useEffect(() => {
     const fetchFactures = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token")
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
         setFactures(
           data.map((f: any) => ({
             ...f,
             statut: f.statut || "EN_ATTENTE",
           }))
-        );
+        )
       } catch (err) {
-        toast.error("Impossible de charger les factures");
+        toast.error("Impossible de charger les factures")
       }
-      setLoading(false);
-    };
-    fetchFactures();
-  }, []);
+      setLoading(false)
+    }
+    fetchFactures()
+  }, [])
 
-  useEffectToastOnRedirect(handleShowPdf);
+  useEffectToastOnRedirect(() => {}) // tu peux supprimer si plus d’usage
 
   // Sélection groupée
   const toggleSelect = (id: string) => {
     setSelected((sel) =>
       sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]
-    );
-  };
+    )
+  }
   const selectAll = () => {
-    setSelected(visibleFactures.map((f) => f.id));
-  };
+    setSelected(visibleFactures.map((f) => f.id))
+  }
   const deselectAll = () => {
-    setSelected([]);
-  };
+    setSelected([])
+  }
 
   const handleDelete = (id: string) => {
     showConfirmToast("Supprimer cette facture ?", async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error();
-        setFactures((factures) => factures.filter((f) => f.id !== id));
-        setSelected((selected) => selected.filter((x) => x !== id));
-        toast.success("Facture supprimée !");
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!res.ok) throw new Error()
+        setFactures((factures) => factures.filter((f) => f.id !== id))
+        setSelected((selected) => selected.filter((x) => x !== id))
+        toast.success("Facture supprimée !")
       } catch {
-        toast.error("Suppression impossible.");
+        toast.error("Suppression impossible.")
       }
-    });
-  };
+    })
+  }
 
   const handleDeleteSelected = () => {
     showConfirmToast(`Supprimer ${selected.length} facture(s) ?`, async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/bulk-delete`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ ids: selected }),
-        });
-        if (!res.ok) throw new Error();
-        setFactures((factures) => factures.filter((f) => !selected.includes(f.id)));
-        setSelected([]);
-        toast.success("Factures supprimées !");
+          body: JSON.stringify({ ids: selected })
+        })
+        if (!res.ok) throw new Error()
+        setFactures((factures) => factures.filter((f) => !selected.includes(f.id)))
+        setSelected([])
+        toast.success("Factures supprimées !")
       } catch {
-        toast.error("Suppression impossible.");
+        toast.error("Suppression impossible.")
       }
-    });
-  };
+    })
+  }
 
-  // Filtres actifs
   const filteredFactures = factures.filter((facture) => {
-    const matchSearch = facture.clientName?.toLowerCase().includes(search.toLowerCase());
-    const matchStatut = filtreStatut === 'Tous' || facture.statut === filtreStatut;
-    return matchSearch && matchStatut;
-  });
+    const matchSearch = facture.clientName?.toLowerCase().includes(search.toLowerCase())
+    const matchStatut = filtreStatut === 'Tous' || facture.statut === filtreStatut
+    return matchSearch && matchStatut
+  })
 
-  // Affichage 5 dernières si pas de filtre ni recherche
   const visibleFactures =
     search.trim() === '' && filtreStatut === 'Tous'
       ? filteredFactures.slice(0, 5)
-      : filteredFactures;
+      : filteredFactures
 
   const chiffreAffaires = factures
     .filter((f) => f.statut === 'PAYEE')
-    .reduce((total, f) => total + (f.totalTTC || 0), 0);
+    .reduce((total, f) => total + (f.totalTTC || 0), 0)
 
   const handleChangeStatut = async (facture: Facture, newStatut: InvoiceStatus) => {
     if (newStatut === facture.statut) {
-      setDropdownOpenId(null);
-      return;
+      setDropdownOpenId(null)
+      return
     }
     setFactures(fs =>
       fs.map(f => f.id === facture.id ? { ...f, statut: newStatut } : f)
-    );
-    setDropdownOpenId(null);
+    )
+    setDropdownOpenId(null)
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${facture.id}/statut`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ statut: newStatut }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success("Statut mis à jour !");
+        body: JSON.stringify({ statut: newStatut })
+      })
+      if (!res.ok) throw new Error()
+      toast.success("Statut mis à jour !")
     } catch (e) {
-      toast.error("Impossible de mettre à jour le statut");
+      toast.error("Impossible de mettre à jour le statut")
       setFactures(fs =>
         fs.map(f => f.id === facture.id ? { ...f, statut: facture.statut } : f)
-      );
+      )
     }
-  };
+  }
 
   const renderQuotaBanner = () => {
-    if (!quota) return null;
+    if (!quota) return null
     if (quota.offer === "FREEMIUM") {
-      const remaining = quota.max - quota.used;
+      const remaining = quota.max - quota.used
       return (
         <div style={{
           marginBottom: 16,
@@ -363,10 +344,10 @@ export default function FacturesPage() {
             </>
           )}
         </div>
-      );
+      )
     }
-    return null;
-  };
+    return null
+  }
 
   return (
     <div className={styles.container}>
@@ -550,20 +531,9 @@ export default function FacturesPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
+                      {/* Bouton PDF html2pdf */}
                       <button
-                        onClick={() => handleShowPdf(facture.number)}
-                        title="Afficher la facture PDF"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "1.2em"
-                        }}
-                      >
-                        📄
-                      </button>
-                      <button
-                        onClick={() => handleDownloadPdf(facture.number)}
+                        onClick={() => handleDownloadPdfHtml2Pdf(facture.id, facture.number)}
                         title="Télécharger la facture PDF"
                         style={{
                           background: "none",
@@ -572,7 +542,7 @@ export default function FacturesPage() {
                           fontSize: "1.2em"
                         }}
                       >
-                        ⬇️
+                        📄 PDF
                       </button>
                       <button
                         title="Supprimer"

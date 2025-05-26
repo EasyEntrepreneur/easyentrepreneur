@@ -1,113 +1,110 @@
-import express, { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import { authenticateToken, AuthenticatedRequest } from '../../../../backend/src/middlewares/authenticateToken';
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import prisma from '@/lib/prisma';
+import { authenticateTokenApiRoute } from "@/lib/middlewares/authenticateTokenApiRoute";
 
-const router = express.Router();
+// UPDATE USER (infos perso)
+export async function PUT(req: NextRequest) {
+  // On check le sous-path pour router les requêtes PUT
+  const url = req.nextUrl.pathname;
 
-// ✅ Mise à jour utilisateur
-router.put('/update-user', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId;
-  if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+  // Parse les données reçues
+  const body = await req.json();
+  const authResult = await authenticateTokenApiRoute(req);
+  if ("status" in authResult) return authResult as NextResponse;
+  const userId = authResult.userId;
 
-  const { name, lastname, email, password } = req.body;
+  // 1. Mise à jour des infos perso : /api/updateUserInfo/update-user
+  if (url.endsWith('/update-user')) {
+    try {
+      const { name, lastname, email, password } = body;
+      const data: any = { name, lastname, email };
+      if (password && password.length > 3) {
+        data.password = await bcrypt.hash(password, 10);
+      }
 
-  try {
-    const data: any = { name, lastname, email };
-    if (password && password.length > 3) {
-      data.password = await bcrypt.hash(password, 10);
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data,
+      });
+
+      return NextResponse.json({ success: true, user: updatedUser });
+    } catch (e) {
+      console.error(e);
+      return NextResponse.json({ error: 'Erreur mise à jour utilisateur' }, { status: 500 });
     }
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data,
-    });
-
-    return res.json({ success: true, user: updatedUser });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: 'Erreur mise à jour utilisateur' });
   }
-});
 
-// ✅ Mise à jour infos de facturation
-router.put('/update-billing', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId;
-  if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+  // 2. Mise à jour des infos de facturation : /api/updateUserInfo/update-billing
+  if (url.endsWith('/update-billing')) {
+    try {
+      const billingInfo = await prisma.billingInfo.upsert({
+        where: { userId },
+        update: {
+          name: body.billingName,
+          lastname: body.billingLastname,
+          email: body.billingEmail,
+          country: body.billingCountry,
+          address1: body.billingAddress,
+          zip: body.billingZip,
+          city: body.billingCity,
+          company: body.billingCompany,
+          vat: body.billingVat,
+        },
+        create: {
+          userId: userId,
+          name: body.billingName,
+          lastname: body.billingLastname,
+          email: body.billingEmail,
+          country: body.billingCountry,
+          address1: body.billingAddress,
+          zip: body.billingZip,
+          city: body.billingCity,
+          company: body.billingCompany,
+          vat: body.billingVat,
+        },
+      });
 
-  const body = req.body;
-
-  try {
-    const billingInfo = await prisma.billingInfo.upsert({
-      where: { userId },
-      update: {
-        name: body.billingName,
-        lastname: body.billingLastname,
-        email: body.billingEmail,
-        country: body.billingCountry,
-        address1: body.billingAddress,
-        zip: body.billingZip,
-        city: body.billingCity,
-        company: body.billingCompany,
-        vat: body.billingVat,
-      },
-      create: {
-        userId: userId, // ✅ garanti string
-        name: body.billingName,
-        lastname: body.billingLastname,
-        email: body.billingEmail,
-        country: body.billingCountry,
-        address1: body.billingAddress,
-        zip: body.billingZip,
-        city: body.billingCity,
-        company: body.billingCompany,
-        vat: body.billingVat,
-      },
-    });
-
-    return res.json({ success: true, billingInfo });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: 'Erreur mise à jour facturation' });
+      return NextResponse.json({ success: true, billingInfo });
+    } catch (e) {
+      console.error(e);
+      return NextResponse.json({ error: 'Erreur mise à jour facturation' }, { status: 500 });
+    }
   }
-});
 
-// ✅ Mise à jour infos entreprise
-router.put('/update-company', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId;
-  if (!userId) return res.status(401).json({ error: "Utilisateur non authentifié" });
+  // 3. Mise à jour des infos entreprise : /api/updateUserInfo/update-company
+  if (url.endsWith('/update-company')) {
+    try {
+      const company = await prisma.companyInfo.upsert({
+        where: { userId },
+        update: {
+          name: body.companyName,
+          address: body.companyAddress,
+          zip: body.companyZip,
+          city: body.companyCity,
+          siret: body.companySiret,
+          vat: body.companyVat,
+          phone: body.companyPhone,
+        },
+        create: {
+          userId: userId,
+          name: body.companyName,
+          address: body.companyAddress,
+          zip: body.companyZip,
+          city: body.companyCity,
+          siret: body.companySiret,
+          vat: body.companyVat,
+          phone: body.companyPhone,
+        },
+      });
 
-  const body = req.body;
-
-  try {
-    const company = await prisma.companyInfo.upsert({
-      where: { userId },
-      update: {
-        name: body.companyName,
-        address: body.companyAddress,
-        zip: body.companyZip,
-        city: body.companyCity,
-        siret: body.companySiret,
-        vat: body.companyVat,
-        phone: body.companyPhone,
-      },
-      create: {
-        userId: userId, // ✅ garanti string
-        name: body.companyName,
-        address: body.companyAddress,
-        zip: body.companyZip,
-        city: body.companyCity,
-        siret: body.companySiret,
-        vat: body.companyVat,
-        phone: body.companyPhone,
-      },
-    });
-
-    return res.json({ success: true, company });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: 'Erreur mise à jour entreprise' });
+      return NextResponse.json({ success: true, company });
+    } catch (e) {
+      console.error(e);
+      return NextResponse.json({ error: 'Erreur mise à jour entreprise' }, { status: 500 });
+    }
   }
-});
 
-export default router;
+  // Endpoint inconnu
+  return NextResponse.json({ error: "Mauvais endpoint" }, { status: 404 });
+}

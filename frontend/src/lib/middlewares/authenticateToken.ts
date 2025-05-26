@@ -1,32 +1,23 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { NextRequest } from "next/server";
+import jwt from "jsonwebtoken";
 
 interface JwtPayload {
-  userId: string; // <-- Doit correspondre au champ mis dans le token
+  userId: string;
 }
 
-export interface AuthenticatedRequest extends Request {
-  user?: JwtPayload;
-}
-
-export const authenticateToken = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Token manquant' });
+export async function authenticateToken(request: NextRequest): Promise<JwtPayload | null> {
+  // Compatible avec NextRequest headers
+  const authHeader =
+    request.headers.get("authorization") || request.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
   }
+  const token = authHeader.split(" ")[1];
 
-  jwt.verify(token, process.env.JWT_SECRET as string, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: 'Token invalide' });
-    }
-
-    (req as AuthenticatedRequest).user = decoded as JwtPayload;
-    next();
-  });
-};
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+    return decoded;
+  } catch (err) {
+    return null;
+  }
+}

@@ -1,14 +1,13 @@
-import { Router, Request, Response } from 'express';
-import prisma from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-const router = Router();
+// GET /api/getCustomerId?userId=...
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
-  const { userId } = req.query;
-
-  if (!userId || typeof userId !== 'string') {
-    res.status(400).json({ error: 'userId requis' });
-    return;
+  if (!userId) {
+    return NextResponse.json({ error: "userId requis" }, { status: 400 });
   }
 
   try {
@@ -18,15 +17,12 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     });
 
     if (!user?.stripeCustomerId) {
-      res.status(404).json({ error: 'stripeCustomerId introuvable' });
-      return;
+      return NextResponse.json({ error: "stripeCustomerId introuvable" }, { status: 404 });
     }
 
-    res.json({ stripeCustomerId: user.stripeCustomerId });
+    return NextResponse.json({ stripeCustomerId: user.stripeCustomerId });
   } catch (error) {
-    console.error('Erreur get-customer-id:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Erreur get-customer-id:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
-});
-
-export default router;
+}

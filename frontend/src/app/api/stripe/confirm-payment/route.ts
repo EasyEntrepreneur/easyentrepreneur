@@ -1,26 +1,22 @@
-import { Router, Request, Response } from 'express';
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from 'stripe';
-import dotenv from 'dotenv';
 import prisma from '@/lib/prisma';
 
-dotenv.config();
-const router = Router();
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2022-11-15',
+  apiVersion: '2025-04-30.basil',
 });
 
-router.post('/', async (req: Request, res: Response) => {
-  const { userId, paymentMethodId, amount, plan } = req.body;
-
-  if (!userId || !paymentMethodId || !amount) {
-    return res.status(400).json({ error: 'Paramètres manquants' });
-  }
-
+export async function POST(req: NextRequest) {
   try {
+    const { userId, paymentMethodId, amount, plan } = await req.json();
+
+    if (!userId || !paymentMethodId || !amount) {
+      return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 });
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.stripeCustomerId) {
-      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
 
     // Création du paiement
@@ -36,11 +32,9 @@ router.post('/', async (req: Request, res: Response) => {
       },
     });
 
-    return res.status(200).json({ success: true, paymentIntent });
+    return NextResponse.json({ success: true, paymentIntent });
   } catch (err: any) {
     console.error('❌ Stripe error:', err);
-    return res.status(500).json({ error: err.message || 'Erreur Stripe' });
+    return NextResponse.json({ error: err.message || 'Erreur Stripe' }, { status: 500 });
   }
-});
-
-export default router;
+}

@@ -1,17 +1,15 @@
-import { Router, Request, Response } from 'express';
+import { NextRequest, NextResponse } from "next/server";
 import prisma from '@/lib/prisma';
 
-const router = Router();
-
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { userId, paymentMethodId } = req.body;
-
-  if (!userId || !paymentMethodId) {
-    res.status(400).json({ error: 'userId et paymentMethodId requis' });
-    return;
-  }
-
+// POST /api/savePaymentMethod
+export async function POST(req: NextRequest) {
   try {
+    const { userId, paymentMethodId } = await req.json();
+
+    if (!userId || !paymentMethodId) {
+      return NextResponse.json({ error: 'userId et paymentMethodId requis' }, { status: 400 });
+    }
+
     // Empêche les doublons en base
     const existing = await prisma.paymentMethod.findUnique({
       where: { stripePaymentMethodId: paymentMethodId },
@@ -26,11 +24,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    res.json({ success: true });
-  } catch (error) {
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
     console.error('Erreur savePaymentMethod:', error);
-    res.status(500).json({ error: 'Erreur lors de l’enregistrement' });
+    return NextResponse.json({ error: 'Erreur lors de l’enregistrement' }, { status: 500 });
   }
-});
-
-export default router;
+}

@@ -1,45 +1,40 @@
-import { Request, Response } from 'express';
 import { NextRequest, NextResponse } from "next/server";
-import prisma from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
-import jwt, { Secret, SignOptions } from 'jsonwebtoken';
+import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import jwt, { Secret, SignOptions } from "jsonwebtoken";
 
-export const loginUser = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
+export async function POST(request: NextRequest) {
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const body = await request.json();
+    const { email, password } = body;
 
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(401).json({ message: 'Utilisateur non trouvé' });
+      return NextResponse.json({ message: "Utilisateur non trouvé" }, { status: 401 });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Mot de passe invalide' });
+      return NextResponse.json({ message: "Mot de passe invalide" }, { status: 401 });
     }
 
-    const jwtSecret: Secret = process.env.JWT_SECRET || 'fallback_secret';
-    const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as `${number}${'d' | 'h' | 'm' | 's'}`;
+    const jwtSecret: Secret = process.env.JWT_SECRET || "fallback_secret";
+    const expiresIn = (process.env.JWT_EXPIRES_IN || "7d") as `${number}${"d" | "h" | "m" | "s"}`;
     const signOptions: SignOptions = { expiresIn };
 
-    const token = jwt.sign(
-      { userId: user.id },
-      jwtSecret,
-      signOptions
-    );
+    const token = jwt.sign({ userId: user.id }, jwtSecret, signOptions);
 
-    res.json({
-      message: 'Connexion réussie',
+    return NextResponse.json({
+      message: "Connexion réussie",
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name ?? '',
+        name: user.name ?? "",
       },
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    return NextResponse.json({ message: "Erreur serveur" }, { status: 500 });
   }
-};
+}

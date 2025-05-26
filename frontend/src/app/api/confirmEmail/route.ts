@@ -1,17 +1,13 @@
-// backend/src/routes/confirmEmail.ts
-import { Router, Request, Response } from 'express';
-import prisma from '@/lib/prisma';
-import dotenv from 'dotenv';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-dotenv.config();
-
-const router = Router();
-
-router.get('/confirm-email', async (req: Request, res: Response) => {
-  const token = req.query.token as string;
+export async function GET(request: NextRequest) {
+  // Récupère le token depuis l’URL (query string)
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get("token");
 
   if (!token) {
-    return res.status(400).json({ error: 'Token manquant' });
+    return NextResponse.json({ error: "Token manquant" }, { status: 400 });
   }
 
   try {
@@ -20,7 +16,7 @@ router.get('/confirm-email', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Token invalide' });
+      return NextResponse.json({ error: "Token invalide" }, { status: 404 });
     }
 
     await prisma.user.update({
@@ -31,11 +27,12 @@ router.get('/confirm-email', async (req: Request, res: Response) => {
       },
     });
 
-    return res.redirect(`${process.env.FRONT_URL}/email-confirmed`);
+    // Redirige proprement vers le front
+    // (Assure-toi que process.env.FRONT_URL est bien accessible)
+    const FRONT_URL = process.env.FRONT_URL || "http://localhost:3000";
+    return NextResponse.redirect(`${FRONT_URL}/email-confirmed`);
   } catch (error) {
-    console.error('Erreur lors de la confirmation email :', error);
-    return res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Erreur lors de la confirmation email :", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
-});
-
-export default router;
+}

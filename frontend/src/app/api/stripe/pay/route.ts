@@ -1,39 +1,30 @@
-// backend/src/routes/stripe/pay.ts
-import express, { Request, Response } from 'express';
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from 'stripe';
-import dotenv from 'dotenv';
 import prisma from '@/lib/prisma';
-import { sendConfirmationEmail } from '../../../lib/utils/sendEmail';
-
-
-dotenv.config();
+import { sendConfirmationEmail } from '@/lib/utils/sendEmail'; // Corrige si le chemin diffère
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2022-11-15',
+  apiVersion: '2025-04-30.basil',
 });
 
-const router = express.Router();
-
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { userId, paymentMethodId, amount, plan } = req.body;
-
-  if (!userId || !paymentMethodId || !amount || !plan) {
-    res.status(400).json({ success: false, error: 'Paramètres requis manquants.' });
-    return;
-  }
-
+export async function POST(req: NextRequest) {
   try {
+    const { userId, paymentMethodId, amount, plan } = await req.json();
+
+    if (!userId || !paymentMethodId || !amount || !plan) {
+      return NextResponse.json({ success: false, error: 'Paramètres requis manquants.' }, { status: 400 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!user?.stripeCustomerId || !user.email) {
-      res.status(404).json({ success: false, error: 'Utilisateur ou email introuvable' });
-      return;
+      return NextResponse.json({ success: false, error: 'Utilisateur ou email introuvable' }, { status: 404 });
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,
+      amount: Math.round(amount * 100),
       currency: 'eur',
       customer: user.stripeCustomerId,
       payment_method: paymentMethodId,
@@ -55,14 +46,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       plan.toUpperCase()
     );
 
-    res.json({ success: true, paymentIntentId: paymentIntent.id });
+    return NextResponse.json({ success: true, paymentIntentId: paymentIntent.id });
   } catch (err: any) {
     console.error('Erreur Stripe paymentIntent:', err);
-    res.status(500).json({
+    return NextResponse.json({
       success: false,
       error: err.message || 'Erreur de paiement',
-    });
+    }, { status: 500 });
   }
-});
-
-export default router;
+}

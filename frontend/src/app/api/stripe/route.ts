@@ -1,69 +1,63 @@
-// backend/src/routes/stripe.ts
-import express, { Request, Response } from 'express';
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from 'stripe';
-import dotenv from 'dotenv';
 import prisma from '@/lib/prisma';
 
-dotenv.config();
-
-const router = express.Router();
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2022-11-15',
+  apiVersion: '2025-04-30.basil',
 });
 
-// ✅ Route pour créer un PaymentIntent
-router.post('/payment-intent', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { amount, userId } = req.body;
+// /api/stripe/payment-intent
+export async function POST(req: NextRequest) {
+  const url = req.nextUrl.pathname;
 
-    if (!amount || !userId) {
-      res.status(400).json({ error: 'amount et userId requis' });
-      return;
+  if (url.endsWith("/payment-intent")) {
+    try {
+      const { amount, userId } = await req.json();
+
+      if (!amount || !userId) {
+        return NextResponse.json({ error: 'amount et userId requis' }, { status: 400 });
+      }
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+
+      if (!user || !user.stripeCustomerId) {
+        return NextResponse.json({ error: 'Utilisateur ou customer Stripe non trouvé' }, { status: 404 });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency: 'eur',
+        customer: user.stripeCustomerId,
+        automatic_payment_methods: { enabled: true },
+      });
+
+      return NextResponse.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+      console.error('Erreur Stripe PaymentIntent:', error);
+      return NextResponse.json({ error: 'Erreur côté Stripe' }, { status: 500 });
     }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-
-    if (!user || !user.stripeCustomerId) {
-      res.status(404).json({ error: 'Utilisateur ou customer Stripe non trouvé' });
-      return;
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'eur',
-      customer: user.stripeCustomerId,
-      automatic_payment_methods: { enabled: true },
-    });
-
-    res.json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error('Erreur Stripe PaymentIntent:', error);
-    res.status(500).json({ error: 'Erreur côté Stripe' });
   }
-});
 
-// ✅ Route pour créer un SetupIntent
-router.post('/setup-intent', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { userId, customerId } = req.body;
+  // /api/stripe/setup-intent
+  if (url.endsWith("/setup-intent")) {
+    try {
+      const { userId, customerId } = await req.json();
 
-    if (!userId || !customerId) {
-      res.status(400).json({ error: 'userId et customerId requis' });
-      return;
+      if (!userId || !customerId) {
+        return NextResponse.json({ error: 'userId et customerId requis' }, { status: 400 });
+      }
+
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+      });
+
+      return NextResponse.json({ clientSecret: setupIntent.client_secret });
+    } catch (error: any) {
+      console.error('Erreur Stripe SetupIntent:', error?.raw || error);
+      return NextResponse.json({ error: 'Erreur lors de la création du SetupIntent', details: error?.raw || error }, { status: 500 });
     }
-
-    const setupIntent = await stripe.setupIntents.create({
-      customer: customerId,
-    });
-
-    res.json({ clientSecret: setupIntent.client_secret });
-  } catch (error: any) {
-    console.error('Erreur Stripe SetupIntent:', error?.raw || error);
-    res.status(500).json({ error: 'Erreur lors de la création du SetupIntent', details: error?.raw || error });
   }
-});
 
-
-export default router;
-
+  // Fallback : non supporté
+  return NextResponse.json({ error: "Endpoint Stripe non trouvé." }, { status: 404 });
+}

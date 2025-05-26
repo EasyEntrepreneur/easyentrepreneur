@@ -1,27 +1,33 @@
-// backend/routes/paymentIntent.ts
-import { Router } from 'express';
+import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const router = Router();
+// Initialise Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2022-11-15',
+  apiVersion: '2025-04-30.basil',
 });
 
-router.post('/', async (req, res) => {
-  const { amount } = req.body;
-
+// POST /api/paymentIntent
+export async function POST(req: NextRequest) {
   try {
+    const body = await req.json();
+    const { amount } = body;
+
+    if (!amount || typeof amount !== 'number') {
+      return NextResponse.json({ error: 'Montant invalide' }, { status: 400 });
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount * 100, // En centimes (€)
+      amount: Math.round(amount * 100), // Montant en centimes (€)
       currency: 'eur',
       automatic_payment_methods: { enabled: true },
     });
 
-    res.json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erreur lors de la création du Payment Intent' });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error: any) {
+    console.error('Erreur PaymentIntent :', error.message);
+    return NextResponse.json(
+      { error: 'Erreur lors de la création du Payment Intent' },
+      { status: 500 }
+    );
   }
-});
-
-export default router;
+}

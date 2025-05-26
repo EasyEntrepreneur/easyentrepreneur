@@ -1,22 +1,18 @@
-import { Router, Request, Response } from 'express';
-import Stripe from 'stripe';
-import dotenv from 'dotenv';
-import prisma from '@/lib/prisma';
-
-dotenv.config();
-
-const router = Router();
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import prisma from "@/lib/prisma";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2022-11-15',
+  apiVersion: "2025-04-30.basil",
 });
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
-  const { userId } = req.query;
+// GET /api/getPaymentMethods?userId=...
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
 
-  if (!userId || typeof userId !== 'string') {
-    res.status(400).json({ error: 'userId requis' });
-    return;
+  if (!userId) {
+    return NextResponse.json({ error: "userId requis" }, { status: 400 });
   }
 
   try {
@@ -25,11 +21,11 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     });
 
     const stripeMethods = await Promise.all(
-      methods.map(async (method) => {
+      methods.map(async (method: { stripePaymentMethodId: string; }) => {
         try {
           const stripeMethod = await stripe.paymentMethods.retrieve(method.stripePaymentMethodId);
 
-          if (stripeMethod.type === 'card' && stripeMethod.card) {
+          if (stripeMethod.type === "card" && stripeMethod.card) {
             return {
               id: stripeMethod.id,
               brand: stripeMethod.card.brand,
@@ -41,7 +37,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
             return null;
           }
         } catch (error) {
-          console.error('Erreur Stripe:', error);
+          console.error("Erreur Stripe:", error);
           return null;
         }
       })
@@ -49,14 +45,12 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const filtered = stripeMethods.filter((m): m is NonNullable<typeof m> => m !== null);
 
-    res.json({
-    success: true,
-    paymentMethods: filtered,
-  });
+    return NextResponse.json({
+      success: true,
+      paymentMethods: filtered,
+    });
   } catch (error) {
-    console.error('Erreur getPaymentMethods:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Erreur getPaymentMethods:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
-});
-
-export default router;
+}

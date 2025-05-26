@@ -1,9 +1,12 @@
-import { Request, Response } from 'express';
+import { NextRequest, NextResponse } from "next/server";
 import prisma from '@/lib/prisma';
-import { AuthenticatedRequest } from '@/lib/middlewares/authenticateToken';
+import { authenticateTokenApiRoute } from '@/lib/middlewares/authenticateTokenApiRoute';
 
-export const getUserInfo = async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId;
+export async function GET(req: NextRequest) {
+  // Authentifie le token (doit retourner { userId } si OK)
+  const authResult = await authenticateTokenApiRoute(req);
+  if ("status" in authResult) return authResult as NextResponse;
+  const userId = authResult.userId;
 
   try {
     const user = await prisma.user.findUnique({
@@ -15,10 +18,10 @@ export const getUserInfo = async (req: AuthenticatedRequest, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
 
-    return res.json({
+    return NextResponse.json({
       user: {
         id: user.id,
         name: user.name,
@@ -43,8 +46,8 @@ export const getUserInfo = async (req: AuthenticatedRequest, res: Response) => {
         companyPhone: user.companyInfo?.phone || ''
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[GET /me] Erreur :', error);
-    return res.status(500).json({ error: 'Erreur serveur' });
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
-};
+}
