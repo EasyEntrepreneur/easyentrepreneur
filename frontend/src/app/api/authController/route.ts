@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { NextRequest, NextResponse } from "next/server";
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt, { Secret, SignOptions } from 'jsonwebtoken';
