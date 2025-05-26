@@ -6,8 +6,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "prisma": "prisma",
-    "postinstall": "npx playwright install"
+    "prisma": "prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",
