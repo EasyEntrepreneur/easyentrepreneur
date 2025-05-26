@@ -27,7 +27,7 @@
               "**/*.ts", 
               "**/*.tsx", 
               ".next/types/**/*.ts", 
-              "../backend/src/utils/sendEmail.ts",
+              "src/lib/utils/sendEmail.ts",
               "./src/generated/client",
               "src/types/next-auth.d.ts"],
   "exclude": ["node_modules"]
