@@ -90,9 +90,22 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // Génération PDF AVEC PUPPETEER
 async function generateInvoicePdfWithPuppeteer(invoiceHtml: string, pdfPath: string) {
+  function getChromePath() {
+    if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+    // Chemin Render
+    if (fsSync.existsSync('/opt/render/.cache/puppeteer/chrome')) {
+      const dirs = fsSync.readdirSync('/opt/render/.cache/puppeteer/chrome');
+      const latest = dirs.sort().reverse()[0];
+      return `/opt/render/.cache/puppeteer/chrome/${latest}/chrome-linux64/chrome`;
+    }
+    // Par défaut : laisse faire Puppeteer
+    return undefined;
+  }
+
   const browser = await puppeteer.launch({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: true
+    headless: true,
+    executablePath: getChromePath()
   })
   const page = await browser.newPage()
   await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' })
