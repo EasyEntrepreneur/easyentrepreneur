@@ -4,7 +4,6 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import * as fsSync from 'fs'
 import puppeteer from 'puppeteer' // <--- AJOUT Puppeteer
 
 const router = Router()

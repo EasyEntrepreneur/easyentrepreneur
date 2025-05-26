@@ -4,8 +4,8 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import PDFDocument from 'pdfkit'
-import fsSync from 'fs'
+import * as fsSync from 'fs'
+import puppeteer from 'puppeteer'
 
 const router = Router()
 
@@ -88,71 +88,24 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-// Génération PDF avec PDFKit
-function generateInvoicePdf(invoice: any, pdfPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: 'A4', margin: 50 })
-      const writeStream = fsSync.createWriteStream(pdfPath)
-      doc.pipe(writeStream)
-
-      // Header
-      doc.fontSize(22).text(`Facture ${invoice.number}`, { align: 'right' })
-      doc.moveDown()
-      doc.fontSize(10)
-        .text(`Date : ${invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString() : ''}`, { align: 'right' })
-      doc.moveDown()
-      doc.fontSize(14).text('Client :')
-      doc.fontSize(10)
-        .text(`${invoice.clientName}`)
-        .text(`${invoice.clientAddress}`)
-        .text(`${invoice.clientZip} ${invoice.clientCity}`)
-      doc.moveDown()
-
-      // Table
-      doc.fontSize(12).text('Prestations', { underline: true })
-      doc.moveDown(0.3)
-      // Table Header
-      doc.font('Helvetica-Bold')
-        .text('Description', 50, doc.y, { continued: true, width: 200 })
-        .text('Quantité', 260, doc.y, { continued: true, width: 70, align: 'right' })
-        .text('Prix unit.', 340, doc.y, { continued: true, width: 70, align: 'right' })
-        .text('Total HT', 420, doc.y, { align: 'right' })
-      doc.font('Helvetica')
-      doc.moveDown(0.3)
-      invoice.items.forEach((item: any) => {
-        doc.text(item.description, 50, doc.y, { continued: true, width: 200 })
-          .text(item.quantity, 260, doc.y, { continued: true, width: 70, align: 'right' })
-          .text(item.unitPrice.toFixed(2) + ' €', 340, doc.y, { continued: true, width: 70, align: 'right' })
-          .text(item.totalHT.toFixed(2) + ' €', 420, doc.y, { align: 'right' })
-        doc.moveDown(0.2)
-      })
-      doc.moveDown()
-
-      // Totaux
-      doc.fontSize(12)
-        .text(`Total HT : ${invoice.totalHT.toFixed(2)} €`, { align: 'right' })
-        .text(`TVA : ${invoice.totalTVA.toFixed(2)} €`, { align: 'right' })
-        .text(`Total TTC : ${invoice.totalTTC.toFixed(2)} €`, { align: 'right' })
-      doc.moveDown()
-
-      // Legal notes / infos de paiement
-      doc.fontSize(10)
-      if (invoice.legalNote) doc.text(invoice.legalNote, { align: 'center' })
-      if (invoice.iban) doc.text(`IBAN : ${invoice.iban}`)
-      if (invoice.bic) doc.text(`BIC : ${invoice.bic}`)
-
-      doc.end()
-
-      writeStream.on('finish', () => resolve())
-      writeStream.on('error', reject)
-    } catch (err) {
-      reject(err)
-    }
+// Génération PDF AVEC PUPPETEER
+async function generateInvoicePdfWithPuppeteer(invoiceHtml: string, pdfPath: string) {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: true
   })
+  const page = await browser.newPage()
+  await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' })
+  await page.pdf({
+    path: pdfPath,
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '30px', bottom: '30px', left: '20px', right: '20px' }
+  })
+  await browser.close()
 }
 
-// POST /invoices — création facture + PDF
+// POST /invoices — création facture + PDF avec HTML envoyé par le front
 router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
   const userId = req.user.userId
   const {
@@ -161,9 +114,13 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     iban,
     bic,
     items,
-    invoiceHtml, // ignoré dans PDFKit
+    invoiceHtml, // <-- utilisé pour le PDF
     ...rest
   } = req.body
+
+  if (!invoiceHtml) {
+    return res.status(400).json({ error: "Le champ invoiceHtml (HTML de la facture) est requis." })
+  }
 
   try {
     // 1. Client existant ou à créer
@@ -273,16 +230,17 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
         totalTVA,
         totalTTC,
         items: { createMany: { data: invoiceItems } },
+        invoiceHtml // <--- Ajout ! (Pense à ajouter le champ dans Prisma)
       },
       include: { items: true, client: true },
     })
 
-    // 5. Génération du PDF avec PDFKit
+    // 5. Génération du PDF avec Puppeteer
     const pdfDir = path.join(__dirname, "../../invoices_pdf")
     await fs.mkdir(pdfDir, { recursive: true })
     const pdfFilename = `${newInvoice.number}.pdf`
     const pdfPath = path.join(pdfDir, pdfFilename)
-    await generateInvoicePdf(newInvoice, pdfPath)
+    await generateInvoicePdfWithPuppeteer(invoiceHtml, pdfPath)
 
     newInvoice = await prisma.invoice.update({
       where: { id: newInvoice.id },
