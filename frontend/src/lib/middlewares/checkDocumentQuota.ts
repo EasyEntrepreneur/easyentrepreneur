@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import prisma from '../../../frontend/src/lib/prisma';
+import prisma from '@/lib/prisma';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 
 /**

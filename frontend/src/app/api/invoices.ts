@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import prisma from '../../lib/prisma'
+import prisma from '@/lib/prisma';
 import { authenticateToken } from '../../../../backend/src/middlewares/authenticateToken'
 import { checkDocumentQuota } from '../../../../backend/src/middlewares/checkDocumentQuota'
 import path from 'path'

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import prisma from '../../../frontend/src/lib/prisma'; // ✅ Correct : import default
+import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 

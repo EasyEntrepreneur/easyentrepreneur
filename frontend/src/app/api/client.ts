@@ -1,5 +1,5 @@
 import express from "express";
-import prisma from "../../lib/prisma";
+import prisma from '@/lib/prisma';
 import { authenticateToken } from "../../../../backend/src/middlewares/authenticateToken";
 
 const router = express.Router();

@@ -1,6 +1,6 @@
 // backend/src/routes/confirmEmail.ts
 import { Router, Request, Response } from 'express';
-import prisma from '../../lib/prisma';
+import prisma from '@/lib/prisma';
 import dotenv from 'dotenv';
 
 dotenv.config();

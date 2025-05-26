@@ -2,7 +2,7 @@
 import express, { Request, Response } from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
-import prisma from '../../../lib/prisma';
+import prisma from '@/lib/prisma';
 import { sendConfirmationEmail } from '../../../lib/utils/sendEmail';
 
 

@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { authenticateToken, AuthenticatedRequest } from '../../../../backend/src/middlewares/authenticateToken';
-import prisma from '../../lib/prisma';
+import prisma from '@/lib/prisma';
 
 const router = express.Router();
 

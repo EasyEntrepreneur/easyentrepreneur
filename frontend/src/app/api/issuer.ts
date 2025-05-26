@@ -1,7 +1,7 @@
 // backend/src/routes/issuer.ts
 import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import prisma from "../../lib/prisma";
+import prisma from '@/lib/prisma';
 
 const router = Router();
 
