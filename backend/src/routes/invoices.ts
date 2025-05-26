@@ -4,7 +4,8 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import { chromium as playwrightChromium } from 'playwright'
+import PDFDocument from 'pdfkit'
+import fsSync from 'fs'
 
 const router = Router()
 
@@ -87,65 +88,71 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-// UTILITY: fallback HTML
-function generateInvoiceHtml(invoice: any) {
-  return `
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; }
-          h1 { color: #444; }
-          table { width: 100%; border-collapse: collapse; margin-top: 24px;}
-          th, td { border: 1px solid #aaa; padding: 8px; }
-          .right { text-align: right; }
-        </style>
-      </head>
-      <body>
-        <h1>Facture ${invoice.number}</h1>
-        <div>
-          <b>Client :</b> ${invoice.clientName} <br>
-          ${invoice.clientAddress} <br>
-          ${invoice.clientZip} ${invoice.clientCity}
-        </div>
-        <div style="margin-top:10px;">
-          <b>Date :</b> ${invoice.issuedAt?.toLocaleDateString ? invoice.issuedAt.toLocaleDateString() : invoice.issuedAt}
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Quantité</th>
-              <th>Prix unitaire</th>
-              <th>Total HT</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              invoice.items
-                .map(
-                  (it: any) => `<tr>
-                    <td>${it.description}</td>
-                    <td class="right">${it.quantity}</td>
-                    <td class="right">${it.unitPrice.toFixed(2)} €</td>
-                    <td class="right">${it.totalHT.toFixed(2)} €</td>
-                  </tr>`
-                )
-                .join("")
-            }
-          </tbody>
-        </table>
-        <div class="right" style="margin-top:24px;">
-          <b>Total HT : </b>${invoice.totalHT.toFixed(2)} €<br>
-          <b>TVA : </b>${invoice.totalTVA.toFixed(2)} €<br>
-          <b>Total TTC : </b>${invoice.totalTTC.toFixed(2)} €
-        </div>
-        <div style="margin-top:24px; font-size:12px;">${invoice.legalNote || ""}</div>
-      </body>
-    </html>
-  `
+// Génération PDF avec PDFKit
+function generateInvoicePdf(invoice: any, pdfPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 })
+      const writeStream = fsSync.createWriteStream(pdfPath)
+      doc.pipe(writeStream)
+
+      // Header
+      doc.fontSize(22).text(`Facture ${invoice.number}`, { align: 'right' })
+      doc.moveDown()
+      doc.fontSize(10)
+        .text(`Date : ${invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString() : ''}`, { align: 'right' })
+      doc.moveDown()
+      doc.fontSize(14).text('Client :')
+      doc.fontSize(10)
+        .text(`${invoice.clientName}`)
+        .text(`${invoice.clientAddress}`)
+        .text(`${invoice.clientZip} ${invoice.clientCity}`)
+      doc.moveDown()
+
+      // Table
+      doc.fontSize(12).text('Prestations', { underline: true })
+      doc.moveDown(0.3)
+      // Table Header
+      doc.font('Helvetica-Bold')
+        .text('Description', 50, doc.y, { continued: true, width: 200 })
+        .text('Quantité', 260, doc.y, { continued: true, width: 70, align: 'right' })
+        .text('Prix unit.', 340, doc.y, { continued: true, width: 70, align: 'right' })
+        .text('Total HT', 420, doc.y, { align: 'right' })
+      doc.font('Helvetica')
+      doc.moveDown(0.3)
+      invoice.items.forEach((item: any) => {
+        doc.text(item.description, 50, doc.y, { continued: true, width: 200 })
+          .text(item.quantity, 260, doc.y, { continued: true, width: 70, align: 'right' })
+          .text(item.unitPrice.toFixed(2) + ' €', 340, doc.y, { continued: true, width: 70, align: 'right' })
+          .text(item.totalHT.toFixed(2) + ' €', 420, doc.y, { align: 'right' })
+        doc.moveDown(0.2)
+      })
+      doc.moveDown()
+
+      // Totaux
+      doc.fontSize(12)
+        .text(`Total HT : ${invoice.totalHT.toFixed(2)} €`, { align: 'right' })
+        .text(`TVA : ${invoice.totalTVA.toFixed(2)} €`, { align: 'right' })
+        .text(`Total TTC : ${invoice.totalTTC.toFixed(2)} €`, { align: 'right' })
+      doc.moveDown()
+
+      // Legal notes / infos de paiement
+      doc.fontSize(10)
+      if (invoice.legalNote) doc.text(invoice.legalNote, { align: 'center' })
+      if (invoice.iban) doc.text(`IBAN : ${invoice.iban}`)
+      if (invoice.bic) doc.text(`BIC : ${invoice.bic}`)
+
+      doc.end()
+
+      writeStream.on('finish', () => resolve())
+      writeStream.on('error', reject)
+    } catch (err) {
+      reject(err)
+    }
+  })
 }
 
+// POST /invoices — création facture + PDF
 router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
   const userId = req.user.userId
   const {
@@ -154,12 +161,12 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
     iban,
     bic,
     items,
-    invoiceHtml,
+    invoiceHtml, // ignoré dans PDFKit
     ...rest
   } = req.body
 
   try {
-    // 1. Récupère ou crée le client (inchangé)
+    // 1. Client existant ou à créer
     let dbClient = null
     if (client.siret) {
       dbClient = await prisma.client.findFirst({ where: { userId, siret: client.siret } })
@@ -189,7 +196,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       dbClient = await prisma.client.create({ data: clientToInsert })
     }
 
-    // 2. Génération d'un numéro de facture unique **robuste**
+    // 2. Génération numéro unique
     const year = new Date().getFullYear()
     const regex = new RegExp(`^${year}-(\\d{3})$`)
     const invoicesThisYear = await prisma.invoice.findMany({
@@ -224,7 +231,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       return res.status(500).json({ error: "Impossible de générer un numéro de facture unique. Veuillez réessayer." })
     }
 
-    // 3. Calcul des totaux
+    // 3. Calcul totaux
     let totalHT = 0
     let totalTVA = 0
     let totalTTC = 0
@@ -270,28 +277,12 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       include: { items: true, client: true },
     })
 
-    // 5. Génération du PDF via Playwright
-    const htmlToUse = invoiceHtml || generateInvoiceHtml(newInvoice)
-    const browser = await playwrightChromium.launch({
-      // **Ajouter ce paramètre**
-      executablePath: '/opt/render/.cache/ms-playwright/chromium-1169/chrome-linux/chrome', // chemin ABSOLU du chrome complet
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage"
-      ]
-    });
-    const page = await browser.newPage()
-    await page.setContent(htmlToUse, { waitUntil: "domcontentloaded" })
-    const pdfBuffer = await page.pdf({ format: "A4" })
-    await browser.close()
-
+    // 5. Génération du PDF avec PDFKit
     const pdfDir = path.join(__dirname, "../../invoices_pdf")
     await fs.mkdir(pdfDir, { recursive: true })
     const pdfFilename = `${newInvoice.number}.pdf`
     const pdfPath = path.join(pdfDir, pdfFilename)
-    await fs.writeFile(pdfPath, pdfBuffer)
+    await generateInvoicePdf(newInvoice, pdfPath)
 
     newInvoice = await prisma.invoice.update({
       where: { id: newInvoice.id },
@@ -330,7 +321,7 @@ router.patch('/:id/statut', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /invoices/number/:number/pdf — Télécharge le PDF par numéro
+// GET /invoices/:id/pdf — Télécharge le PDF par numéro
 router.get('/:id/pdf', authenticateToken, async (req, res) => {
   const userId = req.user.userId
   const invoiceNumber = req.params.id
