@@ -141,6 +141,7 @@ model Invoice {
   paymentInfo   String? // <-- infos de paiement (IBAN, instructions, etc)
   iban String?
   bic  String?
+  invoiceHtml     String?
 
   pdfPath String? // Chemin du PDF stocké (optionnel)
   createdAt DateTime @default(now())
@@ -190,6 +191,7 @@ model Quote {
   totalHT       Float
   totalTVA      Float
   totalTTC      Float
+  quoteHtml     String?
 
   notes         String?     // Remarques / conditions particulières
   pdfPath       String?     // Chemin du PDF stocké (optionnel)
