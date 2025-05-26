@@ -89,34 +89,47 @@ router.get('/:id', authenticateToken, async (req, res) => {
 })
 
 // FONCTION DE GÉNÉRATION PDF AVEC PUPPETEER
-async function generateQuotePdfWithPuppeteer(quoteHtml: string, pdfPath: string) {
+async function generateQuotePdfWithPuppeteer(invoiceHtml: string, pdfPath: string) {
   function getChromePath() {
     if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
     // Chemin Render
-    if (fsSync.existsSync('/opt/render/.cache/puppeteer/chrome')) {
-      const dirs = fsSync.readdirSync('/opt/render/.cache/puppeteer/chrome');
-      const latest = dirs.sort().reverse()[0];
-      return `/opt/render/.cache/puppeteer/chrome/${latest}/chrome-linux64/chrome`;
+    const chromeCache = '/opt/render/.cache/puppeteer/chrome';
+    if (fsSync.existsSync(chromeCache)) {
+      const dirs = fsSync.readdirSync(chromeCache).sort().reverse();
+      for (const dir of dirs) {
+        const chromePath = path.join(chromeCache, dir, 'chrome-linux64', 'chrome');
+        if (fsSync.existsSync(chromePath)) return chromePath;
+      }
     }
-    // Par défaut : laisse faire Puppeteer
+    // Par défaut : laisse faire Puppeteer (utile pour développement local)
     return undefined;
+  }
+
+  const chromePath = getChromePath();
+  if (!chromePath) {
+    throw new Error(
+      "Aucune exécutable Chrome trouvé sur le serveur !\n" +
+      "=> Vérifie que le script 'postinstall' de puppeteer est bien exécuté.\n" +
+      "=> Vérifie les logs Render pour d’éventuelles erreurs d’installation."
+    );
   }
 
   const browser = await puppeteer.launch({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     headless: true,
-    executablePath: getChromePath()
-  })
-  const page = await browser.newPage()
-  await page.setContent(quoteHtml, { waitUntil: 'networkidle0' })
+    executablePath: chromePath,
+  });
+  const page = await browser.newPage();
+  await page.setContent(invoiceHtml, { waitUntil: 'networkidle0' });
   await page.pdf({
     path: pdfPath,
     format: 'A4',
     printBackground: true,
     margin: { top: '30px', bottom: '30px', left: '20px', right: '20px' }
-  })
-  await browser.close()
+  });
+  await browser.close();
 }
+
 
 // POST /quotes — création d'un devis + PDF (avec HTML fourni)
 router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
