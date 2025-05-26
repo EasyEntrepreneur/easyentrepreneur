@@ -4,8 +4,8 @@ import { authenticateToken } from '../middlewares/authenticateToken'
 import { checkDocumentQuota } from '../middlewares/checkDocumentQuota'
 import path from 'path'
 import fs from 'fs/promises'
-import PDFDocument from 'pdfkit'
-import * as fsSync from 'fs';
+import * as fsSync from 'fs'
+import puppeteer from 'puppeteer' // <--- AJOUT Puppeteer
 
 const router = Router()
 
@@ -88,101 +88,40 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-const LIGHT_BLUE = "#E3F0FF"; // Bleu clair
-
-function formatEuro(val: number) {
-  return val.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+// FONCTION DE GÉNÉRATION PDF AVEC PUPPETEER
+async function generateQuotePdfWithPuppeteer(quoteHtml: string, pdfPath: string) {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: true
+  })
+  const page = await browser.newPage()
+  await page.setContent(quoteHtml, { waitUntil: 'networkidle0' })
+  await page.pdf({
+    path: pdfPath,
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '30px', bottom: '30px', left: '20px', right: '20px' }
+  })
+  await browser.close()
 }
 
-function generateQuotePdf(quote: any, pdfPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: 'A4', margin: 40 });
-      const stream = fsSync.createWriteStream(pdfPath);
-      doc.pipe(stream);
-
-      // --- Client à gauche
-      doc.font('Helvetica-Bold').fontSize(11).text(quote.clientName, 40, 40);
-      doc.font('Helvetica').fontSize(10)
-        .text(quote.clientAddress, 40, 55)
-        .text(`${quote.clientZip || ''} ${quote.clientCity || ''}`, 40, 70)
-      if (quote.clientSiret) doc.font('Helvetica-Bold').text('Siret :', 40, 85, { continued: true }).font('Helvetica').text(quote.clientSiret || '', undefined, undefined);
-
-      // Prestataire à droite (remplace ces champs par les tiens si besoin)
-      const rightX = 320;
-      doc.font('Helvetica-Bold').fontSize(11).text(quote.providerName || "Votre entreprise", rightX, 40);
-      doc.font('Helvetica').fontSize(10)
-        .text(quote.providerAddress || "Adresse prestataire", rightX, 55)
-        .text(quote.providerZip && quote.providerCity ? `${quote.providerZip} ${quote.providerCity}` : '', rightX, 70)
-      if (quote.providerSiret)
-        doc.font('Helvetica-Bold').text('Siret :', rightX, 85, { continued: true }).font('Helvetica').text(quote.providerSiret, undefined, undefined);
-
-      // Numéro du devis (titre centré)
-      doc.font('Helvetica').fontSize(12).text(`Devis N°${quote.number || ''}`, 0, 40, { align: 'center' });
-
-      // --- Date du devis (bandeau bleu clair)
-      doc.rect(40, 120, 515, 28).fill(LIGHT_BLUE).stroke();
-      doc.fillColor('#222').font('Helvetica-Bold').fontSize(10).text('Date du devis', 50, 128);
-      doc.font('Helvetica').text(quote.issuedAt ? new Date(quote.issuedAt).toLocaleDateString('fr-FR') : '', 160, 128);
-
-      // --- Tableau des prestations
-      const tableY = 170;
-      doc.fillColor(LIGHT_BLUE).rect(40, tableY, 515, 26).fill();
-      doc.fillColor('#222');
-      doc.font('Helvetica-Bold').fontSize(10)
-        .text('Description', 45, tableY + 8)
-        .text('Quantité', 295, tableY + 8, { width: 60, align: 'right' })
-        .text('Prix unitaire HT', 360, tableY + 8, { width: 90, align: 'right' })
-        .text('Prix total HT', 455, tableY + 8, { width: 90, align: 'right' });
-
-      let y = tableY + 26;
-      quote.items.forEach((item: any, i: number) => {
-        doc.fillColor(i % 2 ? "#fff" : "#f5f7fa"); // Alternance
-        doc.rect(40, y, 515, 26).fill();
-        doc.fillColor('#222');
-        doc.font('Helvetica-Bold').fontSize(10).text(item.description, 45, y + 3, { width: 220 });
-        if (item.longDescription) {
-          doc.font('Helvetica').fontSize(9).text(item.longDescription, 45, y + 16, { width: 220 });
-        }
-        doc.font('Helvetica').fontSize(10)
-          .text(item.quantity, 295, y + 3, { width: 60, align: 'right' })
-          .text(formatEuro(item.unitPrice), 360, y + 3, { width: 90, align: 'right' })
-          .text(formatEuro(item.totalHT), 455, y + 3, { width: 90, align: 'right' });
-        y += 26;
-      });
-
-      // --- Total HT (case bleue à droite)
-      y += 10;
-      doc.fillColor(LIGHT_BLUE).rect(360, y, 195, 24).fill();
-      doc.fillColor('#222');
-      doc.font('Helvetica-Bold').text('Total HT', 365, y + 7);
-      doc.font('Helvetica').text(formatEuro(quote.totalHT), 500, y + 7, { align: 'right', width: 50 });
-
-      // --- Mention en bas centré
-      doc.fontSize(10).fillColor('#555').text("TVA non applicable, art. 293B du CGI", 0, y + 40, { align: 'center' });
-
-      doc.end();
-      stream.on('finish', () => resolve());
-      stream.on('error', reject);
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-// POST /quotes — création d'un devis + PDF
+// POST /quotes — création d'un devis + PDF (avec HTML fourni)
 router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
   const userId = req.user.userId
   const {
     client,
     validUntil,
     items,
-    quoteHtml, // ignoré (pas utile pour PDFKit)
+    quoteHtml, // !! utilisé pour Puppeteer !!
     ...rest
   } = req.body
 
+  if (!quoteHtml) {
+    return res.status(400).json({ error: "Le champ quoteHtml (HTML du devis) est requis." })
+  }
+
   try {
-    // 1. Client existant ou à créer
+    // Client existant ou à créer
     let dbClient = null
     if (client.siret) {
       dbClient = await prisma.client.findFirst({ where: { userId, siret: client.siret } })
@@ -212,7 +151,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       dbClient = await prisma.client.create({ data: clientToInsert })
     }
 
-    // 2. Génération numéro unique pour le devis (par année)
+    // Génération numéro unique pour le devis (par année)
     const year = new Date().getFullYear()
     const regex = new RegExp(`^${year}-(\\d{3})$`)
     const quotesThisYear = await prisma.quote.findMany({
@@ -247,7 +186,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       return res.status(500).json({ error: "Impossible de générer un numéro de devis unique. Veuillez réessayer." })
     }
 
-    // 3. Calcul totaux
+    // Calcul totaux
     let totalHT = 0
     let totalTVA = 0
     let totalTTC = 0
@@ -269,7 +208,7 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
       }
     })
 
-    // 4. Création du devis en base
+    // Création du devis en base
     let newQuote = await prisma.quote.create({
       data: {
         number,
@@ -288,16 +227,17 @@ router.post('/', authenticateToken, checkDocumentQuota, async (req, res) => {
         totalTTC,
         notes: rest.notes,
         items: { createMany: { data: quoteItems } },
+        quoteHtml // <--- Stocke l'HTML pour pouvoir regénérer le PDF à l'identique !
       },
       include: { items: true, client: true },
     })
 
-    // 5. Génération du PDF avec PDFKit
+    // GÉNÉRATION PDF AVEC PUPPETEER
     const pdfDir = path.join(__dirname, "../../quotes_pdf")
     await fs.mkdir(pdfDir, { recursive: true })
     const pdfFilename = `${newQuote.number}.pdf`
     const pdfPath = path.join(pdfDir, pdfFilename)
-    await generateQuotePdf(newQuote, pdfPath)
+    await generateQuotePdfWithPuppeteer(quoteHtml, pdfPath)
 
     // MAJ chemin PDF en base
     newQuote = await prisma.quote.update({
