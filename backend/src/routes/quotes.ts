@@ -92,63 +92,84 @@ router.get('/:id', authenticateToken, async (req, res) => {
 function generateQuotePdf(quote: any, pdfPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 50 })
-      const writeStream = fsSync.createWriteStream(pdfPath)
-      doc.pipe(writeStream)
+      const doc = new PDFDocument({ size: 'A4', margin: 40 });
+      const writeStream = fsSync.createWriteStream(pdfPath);
+      doc.pipe(writeStream);
 
-      // Header
-      doc.fontSize(22).text(`Devis ${quote.number}`, { align: 'right' })
-      doc.moveDown()
-      doc.fontSize(10)
-        .text(`Date : ${quote.issuedAt ? new Date(quote.issuedAt).toLocaleDateString() : ''}`, { align: 'right' })
-      doc.moveDown()
-      doc.fontSize(14).text('Client :')
-      doc.fontSize(10)
-        .text(`${quote.clientName}`)
-        .text(`${quote.clientAddress}`)
-        .text(`${quote.clientZip} ${quote.clientCity}`)
-      doc.moveDown()
+      // Header : LOGO/TITRE
+      doc.fontSize(20).font('Helvetica-Bold').text('DEVIS', 40, 40, { align: 'left' });
+      doc.fontSize(10).font('Helvetica').text(`N° ${quote.number}`, 40, 65, { align: 'left' });
 
-      // Table
-      doc.fontSize(12).text('Prestations', { underline: true })
-      doc.moveDown(0.3)
-      // Table Header
-      doc.font('Helvetica-Bold')
-        .text('Description', 50, doc.y, { continued: true, width: 200 })
-        .text('Quantité', 260, doc.y, { continued: true, width: 70, align: 'right' })
-        .text('Prix unit.', 340, doc.y, { continued: true, width: 70, align: 'right' })
-        .text('Total HT', 420, doc.y, { align: 'right' })
-      doc.font('Helvetica')
-      doc.moveDown(0.3)
+      // Infos émetteur (à GAUCHE)
+      doc.fontSize(11).font('Helvetica-Bold').text('Émetteur :', 40, 100);
+      doc.font('Helvetica').fontSize(10)
+        .text('EasyEntrepreneur', 40, 115)
+        .text('Adresse émetteur', 40, 130)
+        .text('Email', 40, 145)
+        .text('Téléphone', 40, 160);
+
+      // Infos client (à DROITE)
+      doc.fontSize(11).font('Helvetica-Bold').text('Client :', 350, 100);
+      doc.font('Helvetica').fontSize(10)
+        .text(quote.clientName, 350, 115)
+        .text(quote.clientAddress, 350, 130)
+        .text(`${quote.clientZip} ${quote.clientCity}`, 350, 145)
+        .text(quote.clientEmail || '', 350, 160)
+        .text(quote.clientPhone || '', 350, 175);
+
+      // Date validité (centré sous header)
+      doc.fontSize(11).text(
+        `Émis le : ${quote.issuedAt ? new Date(quote.issuedAt).toLocaleDateString() : ''}` +
+        (quote.validUntil ? ` | Valide jusqu'au : ${new Date(quote.validUntil).toLocaleDateString()}` : ''),
+        0, 195, { align: 'center' }
+      );
+
+      // Tableau des prestations
+      const tableTop = 220;
+      doc.moveTo(40, tableTop).lineTo(555, tableTop).stroke();
+      doc.font('Helvetica-Bold').fontSize(10);
+      doc.text('Description', 45, tableTop + 5, { width: 200 });
+      doc.text('Qté', 255, tableTop + 5, { width: 40, align: 'right' });
+      doc.text('PU HT', 310, tableTop + 5, { width: 60, align: 'right' });
+      doc.text('TVA', 375, tableTop + 5, { width: 50, align: 'right' });
+      doc.text('Total HT', 440, tableTop + 5, { width: 80, align: 'right' });
+      doc.font('Helvetica');
+      doc.moveTo(40, tableTop + 23).lineTo(555, tableTop + 23).stroke();
+
+      // Lignes du tableau
+      let y = tableTop + 30;
       quote.items.forEach((item: any) => {
-        doc.text(item.description, 50, doc.y, { continued: true, width: 200 })
-          .text(item.quantity, 260, doc.y, { continued: true, width: 70, align: 'right' })
-          .text(item.unitPrice.toFixed(2) + ' €', 340, doc.y, { continued: true, width: 70, align: 'right' })
-          .text(item.totalHT.toFixed(2) + ' €', 420, doc.y, { align: 'right' })
-        doc.moveDown(0.2)
-      })
-      doc.moveDown()
+        doc.text(item.description, 45, y, { width: 200 });
+        doc.text(item.quantity, 255, y, { width: 40, align: 'right' });
+        doc.text(item.unitPrice.toFixed(2) + ' €', 310, y, { width: 60, align: 'right' });
+        doc.text((item.vatRate || 0).toFixed(2) + ' %', 375, y, { width: 50, align: 'right' });
+        doc.text(item.totalHT.toFixed(2) + ' €', 440, y, { width: 80, align: 'right' });
+        y += 20;
+      });
 
       // Totaux
-      doc.fontSize(12)
-        .text(`Total HT : ${quote.totalHT.toFixed(2)} €`, { align: 'right' })
-        .text(`TVA : ${quote.totalTVA.toFixed(2)} €`, { align: 'right' })
-        .text(`Total TTC : ${quote.totalTTC.toFixed(2)} €`, { align: 'right' })
-      doc.moveDown()
+      y += 10;
+      doc.font('Helvetica-Bold').text('Total HT :', 375, y, { width: 80, align: 'right' });
+      doc.font('Helvetica').text(quote.totalHT.toFixed(2) + ' €', 460, y, { width: 60, align: 'right' });
+      y += 15;
+      doc.font('Helvetica-Bold').text('TVA :', 375, y, { width: 80, align: 'right' });
+      doc.font('Helvetica').text(quote.totalTVA.toFixed(2) + ' €', 460, y, { width: 60, align: 'right' });
+      y += 15;
+      doc.font('Helvetica-Bold').text('Total TTC :', 375, y, { width: 80, align: 'right' });
+      doc.font('Helvetica').text(quote.totalTTC.toFixed(2) + ' €', 460, y, { width: 60, align: 'right' });
 
-      // Notes/validité
-      doc.fontSize(10)
-      if (quote.notes) doc.text(quote.notes, { align: 'center' })
-      if (quote.validUntil) doc.text(`Valable jusqu'au : ${new Date(quote.validUntil).toLocaleDateString()}`)
+      // Notes (en bas centré)
+      if (quote.notes) {
+        doc.font('Helvetica').fontSize(10).text(quote.notes, 40, y + 40, { align: 'center', width: 515 });
+      }
 
-      doc.end()
-
-      writeStream.on('finish', () => resolve())
-      writeStream.on('error', reject)
+      doc.end();
+      writeStream.on('finish', () => resolve());
+      writeStream.on('error', reject);
     } catch (err) {
-      reject(err)
+      reject(err);
     }
-  })
+  });
 }
 
 // POST /quotes — création d'un devis + PDF
