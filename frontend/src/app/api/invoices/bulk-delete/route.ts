@@ -20,17 +20,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Aucun ID fourni" }, { status: 400 });
     }
 
-    // Suppression sécurisée (ne supprime que les factures de ce user)
-    await prisma.invoice.deleteMany({
+    // 1. Supprime les InvoiceItems liés AVANT de supprimer les factures
+    await prisma.invoiceItem.deleteMany({
+      where: {
+        invoiceId: { in: ids }
+      }
+    });
+
+    // 2. Supprime les factures
+    const result = await prisma.invoice.deleteMany({
       where: {
         id: { in: ids },
         userId,
       },
     });
 
-    return NextResponse.json({ message: "Factures supprimées !" });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ message: "Factures supprimées", count: result.count });
+  } catch (err: any) {
+    console.error("Erreur suppression bulk invoices:", err);
+    return NextResponse.json({ error: "Erreur serveur", details: err.message }, { status: 500 });
   }
 }

@@ -20,17 +20,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Aucun ID fourni" }, { status: 400 });
     }
 
-    // Suppression sécurisée (ne supprime que les devis de ce user)
-    await prisma.quote.deleteMany({
+    // 1. Supprime les QuoteItems liés AVANT de supprimer les devis
+    await prisma.quoteItem.deleteMany({
+      where: {
+        quoteId: { in: ids }
+      }
+    });
+
+    // 2. Supprime les devis
+    const result = await prisma.quote.deleteMany({
       where: {
         id: { in: ids },
         userId,
       },
     });
 
-    return NextResponse.json({ message: "Devis supprimées !" });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ message: "Devis supprimées", count: result.count });
+  } catch (err: any) {
+    console.error("Erreur suppression bulk quotes:", err);
+    return NextResponse.json({ error: "Erreur serveur", details: err.message }, { status: 500 });
   }
 }
