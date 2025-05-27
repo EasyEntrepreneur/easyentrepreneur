@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { authenticateTokenApiRoute } from '@/lib/middlewares/authenticateTokenApiRoute' // Middleware adapté pour Next API (voir note plus bas)
+import { authenticateTokenApiRoute } from '@/lib/middlewares/authenticateTokenApiRoute'
+
+// Utilitaire pour vérifier l'objet auth
+function isUser(obj: any): obj is { userId: string } {
+  return obj && typeof obj.userId === "string";
+}
 
 export async function GET(req: NextRequest) {
-  // Authentification
-  const { userId } = await authenticateTokenApiRoute(req)
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const auth = await authenticateTokenApiRoute(req)
+  if (!isUser(auth)) return auth; // Si erreur auth, return la réponse JSON
+  const userId = auth.userId;
+
   // Liste des factures de l'utilisateur
   const invoices = await prisma.invoice.findMany({
     where: { userId },
@@ -18,10 +22,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await authenticateTokenApiRoute(req)
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const auth = await authenticateTokenApiRoute(req)
+  if (!isUser(auth)) return auth; // Si erreur auth, return la réponse JSON
+  const userId = auth.userId;
+
   const body = await req.json()
   const {
     client,
