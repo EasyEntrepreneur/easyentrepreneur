@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from '@/lib/prisma';
 import { authenticateTokenApiRoute } from '@/lib/middlewares/authenticateTokenApiRoute';
-import path from 'path';
-import fs from 'fs/promises';
-import * as fsSync from 'fs';
-import * as htmlPdfNode from 'html-pdf-node';
 
-// Génère un PDF depuis HTML et retourne un Buffer
-async function generateQuotePdfWithHtmlPdfNode(html: string): Promise<Buffer> {
-  const options = {
-    format: 'A4',
-    printBackground: true,
-    margin: { top: '30px', bottom: '30px', left: '20px', right: '20px' }
-  };
-  // 👇 Cette ligne doit retourner un Promise<Buffer>
-  return htmlPdfNode.generatePdf({ content: html }, options) as unknown as Buffer;
+// Utilitaire pour sécuriser le retour de l'auth
+function isUser(obj: any): obj is { userId: string } {
+  return obj && typeof obj.userId === "string";
 }
-// POST /api/quotes — création d'un devis + PDF (HTML dans body)
+
+// POST /api/quotes — création d'un devis (HTML dans body, pas de PDF ici !)
 export async function POST(req: NextRequest) {
-  const authResult = await authenticateTokenApiRoute(req);
-  // Si NextResponse est retourné, c'est une erreur d'auth
-  if ("status" in authResult) return authResult as NextResponse;
-  const userId = authResult.userId;
+  const auth = await authenticateTokenApiRoute(req);
+  if (!isUser(auth)) return auth; // Auth échouée = return NextResponse direct
+  const userId = auth.userId;
 
   const data = await req.json();
   const { client, validUntil, items, quoteHtml, ...rest } = data;
@@ -31,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Client existant ou à créer
+    // Recherche ou création du client
     let dbClient = null;
     if (client.siret) {
       dbClient = await prisma.client.findFirst({ where: { userId, siret: client.siret } });
@@ -61,7 +51,7 @@ export async function POST(req: NextRequest) {
       dbClient = await prisma.client.create({ data: clientToInsert });
     }
 
-    // Génération numéro unique pour le devis (par année)
+    // Génération d'un numéro unique pour le devis
     const year = new Date().getFullYear();
     const regex = new RegExp(`^${year}-(\\d{3})$`);
     const quotesThisYear = await prisma.quote.findMany({
@@ -81,7 +71,6 @@ export async function POST(req: NextRequest) {
       }
     }
     let number = `${year}-${String(nextNumber).padStart(3, '0')}`;
-
     let exists = await prisma.quote.findUnique({ where: { number } });
     let tries = 0;
     const maxTries = 10;
@@ -96,7 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Impossible de générer un numéro de devis unique. Veuillez réessayer." }, { status: 500 });
     }
 
-    // Calcul totaux
+    // Calcul des totaux
     let totalHT = 0;
     let totalTVA = 0;
     let totalTTC = 0;
@@ -118,8 +107,8 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // Création du devis en base
-    let newQuote = await prisma.quote.create({
+    // Création du devis dans la base, stockage de l'HTML (PAS de PDF)
+    const newQuote = await prisma.quote.create({
       data: {
         number,
         userId,
@@ -137,31 +126,15 @@ export async function POST(req: NextRequest) {
         totalTTC,
         notes: rest.notes,
         items: { createMany: { data: quoteItems } },
-        quoteHtml // <--- Stocke l'HTML pour pouvoir regénérer le PDF à l'identique !
+        quoteHtml // <- L'HTML pour génération PDF côté client !
       },
       include: { items: true, client: true },
     });
 
-    // GÉNÉRATION PDF AVEC HTML-PDF-NODE
-    const pdfBuffer = await generateQuotePdfWithHtmlPdfNode(quoteHtml);
-
-    // Sauvegarder le PDF dans un dossier temporaire (optionnel, à adapter)
-    const pdfDir = path.join(process.cwd(), "public", "quotes_pdf");
-    if (!fsSync.existsSync(pdfDir)) await fs.mkdir(pdfDir, { recursive: true });
-    const pdfFilename = `${newQuote.number}.pdf`;
-    const pdfPath = path.join(pdfDir, pdfFilename);
-    await fs.writeFile(pdfPath, pdfBuffer);
-
-    // MAJ chemin PDF en base
-    newQuote = await prisma.quote.update({
-      where: { id: newQuote.id },
-      data: { pdfPath: pdfFilename },
-      include: { items: true, client: true },
-    });
-
+    // Pas de génération PDF ici ! Juste retour de la ressource
     return NextResponse.json({
       ...newQuote,
-      pdfUrl: `/quotes_pdf/${newQuote.number}.pdf`
+      // Tu peux ajouter un endpoint ici pour télécharger le PDF généré côté client si besoin
     }, { status: 201 });
 
   } catch (error: any) {
