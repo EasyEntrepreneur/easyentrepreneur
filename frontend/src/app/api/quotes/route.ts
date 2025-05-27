@@ -142,3 +142,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message || 'Erreur serveur lors de la création du devis.' }, { status: 500 });
   }
 }
+
+// GET /api/quotes — liste des devis pour l'utilisateur connecté
+export async function GET(req: NextRequest) {
+  const auth = await authenticateTokenApiRoute(req);
+  if (!isUser(auth)) return auth; // Auth échouée = return NextResponse direct
+  const userId = auth.userId;
+
+  try {
+    const quotes = await prisma.quote.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: true, // ou "quoteItems" selon ton modèle Prisma
+        client: true
+      }
+    });
+
+    return NextResponse.json(quotes, { status: 200 });
+  } catch (error: any) {
+    console.error('Erreur GET /quotes :', error);
+    return NextResponse.json({ error: error.message || 'Erreur serveur lors de la récupération des devis.' }, { status: 500 });
+  }
+}
