@@ -6,6 +6,7 @@ import StripeWrapper from '../components/StripeWrapper';
 import { PaymentProvider } from '../contexts/PaymentContext'; // ✅ Import context
 import { Toaster } from "react-hot-toast";
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={inter.className}>
+        <Analytics/>
         <SpeedInsights/>
         <Toaster position="top-center" />
         <Providers>
