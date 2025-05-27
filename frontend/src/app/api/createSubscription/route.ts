@@ -51,13 +51,15 @@ export async function POST(request: NextRequest) {
 
     let clientSecret: string | null = null;
 
+    // Correction de typage ici
+    const latestInvoice = (subscription.latest_invoice as any) || null;
     if (
-      subscription.latest_invoice &&
-      typeof subscription.latest_invoice !== "string" &&
-      subscription.latest_invoice.payment_intent &&
-      typeof subscription.latest_invoice.payment_intent !== "string"
+      latestInvoice &&
+      typeof latestInvoice !== "string" &&
+      latestInvoice.payment_intent &&
+      typeof latestInvoice.payment_intent !== "string"
     ) {
-      clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+      clientSecret = latestInvoice.payment_intent.client_secret;
     }
 
     if (!clientSecret) {
