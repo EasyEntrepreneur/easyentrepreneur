@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import styles from './factures.module.css'
 import toast from "react-hot-toast"
 import RevenueChart from '@/components/RevenueChart'
-// Pas d'import html2pdf ici !
 
 type InvoiceStatus = 'PAYEE' | 'EN_ATTENTE' | 'ANNULE'
 
@@ -35,83 +34,7 @@ const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'ANNULE', label: 'Annulée' }
 ]
 
-// ----- PDF AVEC html2pdf.js (optionnel, peut être retiré si tu ne veux plus le bouton PDF) -----
-const handleDownloadPdfHtml2Pdf = async (id: string, number: string) => {
-  const token = localStorage.getItem("token")
-  if (!token) {
-    toast.error("Veuillez vous reconnecter")
-    return
-  }
-  try {
-    // On va chercher le HTML brut de la facture
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (!res.ok) throw new Error("Impossible de récupérer la facture")
-    const data = await res.json()
-    if (!data.invoiceHtml) {
-      toast.error("Impossible de générer le PDF (HTML manquant)")
-      return
-    }
-
-    // Import dynamique côté client uniquement
-    const html2pdf = (await import('html2pdf.js')).default
-
-    // Création d'un élément caché temporaire
-    const container = document.createElement('div')
-    container.style.position = 'fixed'
-    container.style.left = '-99999px'
-    container.innerHTML = data.invoiceHtml
-    document.body.appendChild(container)
-
-    await html2pdf()
-      .from(container)
-      .set({
-        filename: `Facture-${number}.pdf`,
-        html2canvas: { scale: 2 },
-        jsPDF: { format: 'a4' }
-      })
-      .save()
-
-    document.body.removeChild(container)
-  } catch (e) {
-    toast.error("Erreur lors de la génération du PDF")
-  }
-}
-
-function showConfirmToast(message: string, onConfirm: () => void) {
-  toast(
-    (t) => (
-      <span>
-        {message}
-        <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-          <button
-            style={{
-              background: "#ef4444", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
-            }}
-            onClick={() => {
-              toast.dismiss(t.id)
-              onConfirm()
-            }}
-          >
-            Oui, supprimer
-          </button>
-          <button
-            style={{
-              background: "#f3f4f6", color: "#222", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
-            }}
-            onClick={() => toast.dismiss(t.id)}
-          >
-            Annuler
-          </button>
-        </div>
-      </span>
-    ),
-    { duration: 6000 }
-  )
-}
-
-// ----------- Affichage du toast avec bouton "Afficher" ------------
+// -------- Toast "afficher" bouton vers PDF --------
 function useEffectToastOnRedirect() {
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -146,6 +69,39 @@ function useEffectToastOnRedirect() {
       }
     }
   }, [])
+}
+
+// --------- Confirmation toast ---------
+function showConfirmToast(message: string, onConfirm: () => void) {
+  toast(
+    (t) => (
+      <span>
+        {message}
+        <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+          <button
+            style={{
+              background: "#ef4444", color: "#fff", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
+            }}
+            onClick={() => {
+              toast.dismiss(t.id)
+              onConfirm()
+            }}
+          >
+            Oui, supprimer
+          </button>
+          <button
+            style={{
+              background: "#f3f4f6", color: "#222", border: "none", borderRadius: 4, padding: "4px 12px", cursor: "pointer"
+            }}
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Annuler
+          </button>
+        </div>
+      </span>
+    ),
+    { duration: 6000 }
+  )
 }
 
 // ------------- PAGE -------------
@@ -533,10 +489,10 @@ export default function FacturesPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      {/* Bouton PDF html2pdf */}
+                      {/* Icône afficher PDF */}
                       <button
-                        onClick={() => handleDownloadPdfHtml2Pdf(facture.id, facture.number)}
-                        title="Télécharger la facture PDF"
+                        onClick={() => window.open(`/dashboard/factures/${facture.id}/pdf`, "_blank")}
+                        title="Afficher la facture PDF"
                         style={{
                           background: "none",
                           border: "none",
@@ -544,7 +500,7 @@ export default function FacturesPage() {
                           fontSize: "1.2em"
                         }}
                       >
-                        📄
+                        👁️ {/* ou 📄 */}
                       </button>
                       <button
                         title="Supprimer"
