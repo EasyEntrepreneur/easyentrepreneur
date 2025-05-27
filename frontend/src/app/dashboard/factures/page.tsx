@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react'
 import styles from './factures.module.css'
 import toast from "react-hot-toast"
 import RevenueChart from '@/components/RevenueChart'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import html2pdf from 'html2pdf.js'
+// Pas d'import html2pdf ici !
 
 type InvoiceStatus = 'PAYEE' | 'EN_ATTENTE' | 'ANNULE'
 
@@ -55,6 +53,9 @@ const handleDownloadPdfHtml2Pdf = async (id: string, number: string) => {
       toast.error("Impossible de générer le PDF (HTML manquant)")
       return
     }
+
+    // Import dynamique côté client uniquement
+    const html2pdf = (await import('html2pdf.js')).default
 
     // Création d'un élément caché temporaire
     const container = document.createElement('div')
