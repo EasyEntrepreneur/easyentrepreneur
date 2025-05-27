@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import styles from './factures.module.css'
 import toast from "react-hot-toast"
 import RevenueChart from '@/components/RevenueChart'
@@ -34,44 +34,35 @@ const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'ANNULE', label: 'Annulée' }
 ]
 
-// -------- Toast "afficher" bouton vers PDF --------
-function useEffectToastOnRedirect() {
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const toastData = sessionStorage.getItem("showInvoiceToast")
-      if (toastData) {
-        const { id } = JSON.parse(toastData)
-        if (id) {
-          toast.success(
-            <span>
-              Facture générée avec succès&nbsp;
-              <button
-                style={{
-                  color: "#3b82f6",
-                  textDecoration: "underline",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  font: "inherit",
-                }}
-                onClick={() => window.open(`/dashboard/factures/${id}/pdf`, "_blank")}
-              >
-                Afficher
-              </button>
-            </span>,
-            { duration: 7000 }
-          )
-        } else {
-          toast.success("Facture générée avec succès !")
-        }
-        sessionStorage.removeItem("showInvoiceToast")
-      }
-    }
-  }, [])
+// Télécharge et affiche le PDF dans un nouvel onglet
+const handleShowOrDownloadPdf = async (id: string, number: string, type: 'facture' | 'devis' = 'facture') => {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    toast.error("Veuillez vous reconnecter")
+    return
+  }
+  try {
+    const endpoint = type === 'devis'
+      ? `${process.env.NEXT_PUBLIC_API_URL}/quotes/${id}/pdf`
+      : `${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}/pdf`
+    const res = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!res.ok) throw new Error("Impossible de récupérer le PDF")
+    const blob = await res.blob()
+    const pdfUrl = window.URL.createObjectURL(blob)
+    // Ouvre le PDF dans un nouvel onglet
+    window.open(pdfUrl, '_blank')
+    // Si tu veux proposer le download auto : (décommente la ligne suivante)
+    // const link = document.createElement('a')
+    // link.href = pdfUrl
+    // link.download = `${type === 'devis' ? 'Devis' : 'Facture'}-${number}.pdf`
+    // link.click()
+  } catch (e) {
+    toast.error("Erreur lors de la récupération du PDF")
+  }
 }
 
-// --------- Confirmation toast ---------
 function showConfirmToast(message: string, onConfirm: () => void) {
   toast(
     (t) => (
@@ -104,6 +95,42 @@ function showConfirmToast(message: string, onConfirm: () => void) {
   )
 }
 
+function useEffectToastOnRedirect(showPdf: (id: string, number: string) => void) {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const toastData = sessionStorage.getItem("showInvoiceToast")
+      if (toastData) {
+        const { id, number } = JSON.parse(toastData)
+        if (id && number) {
+          toast.success(
+            <span>
+              Facture générée avec succès&nbsp;
+              <button
+                style={{
+                  color: "#3b82f6",
+                  textDecoration: "underline",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  font: "inherit",
+                }}
+                onClick={() => showPdf(id, number)}
+              >
+                Afficher
+              </button>
+            </span>,
+            { duration: 7000 }
+          )
+        } else {
+          toast.success("Facture générée avec succès !")
+        }
+        sessionStorage.removeItem("showInvoiceToast")
+      }
+    }
+  }, [showPdf])
+}
+
 // ------------- PAGE -------------
 export default function FacturesPage() {
   const [factures, setFactures] = useState<Facture[]>([])
@@ -114,7 +141,10 @@ export default function FacturesPage() {
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
   const [selected, setSelected] = useState<string[]>([])
 
-  useEffectToastOnRedirect()
+  // Callback pour éviter re-rendu inutile du toast
+  const handleShowPdf = useCallback((id: string, number: string) => {
+    handleShowOrDownloadPdf(id, number, 'facture')
+  }, [])
 
   useEffect(() => {
     const fetchQuota = async () => {
@@ -155,6 +185,8 @@ export default function FacturesPage() {
     }
     fetchFactures()
   }, [])
+
+  useEffectToastOnRedirect(handleShowPdf)
 
   // Sélection groupée
   const toggleSelect = (id: string) => {
@@ -489,10 +521,24 @@ export default function FacturesPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      {/* Icône afficher PDF */}
+                      {/* Afficher PDF (icone oeil) */}
                       <button
-                        onClick={() => window.open(`/dashboard/factures/${facture.id}/pdf`, "_blank")}
+                        onClick={() => handleShowPdf(facture.id, facture.number)}
                         title="Afficher la facture PDF"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "1.2em",
+                          marginRight: 6
+                        }}
+                      >
+                        👁️
+                      </button>
+                      {/* Télécharger PDF */}
+                      <button
+                        onClick={() => handleShowOrDownloadPdf(facture.id, facture.number, 'facture')}
+                        title="Télécharger la facture PDF"
                         style={{
                           background: "none",
                           border: "none",
@@ -500,8 +546,9 @@ export default function FacturesPage() {
                           fontSize: "1.2em"
                         }}
                       >
-                        👁️ {/* ou 📄 */}
+                        📄
                       </button>
+                      {/* Supprimer */}
                       <button
                         title="Supprimer"
                         style={{
