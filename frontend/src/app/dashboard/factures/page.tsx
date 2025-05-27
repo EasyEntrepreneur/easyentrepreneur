@@ -35,7 +35,7 @@ const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'ANNULE', label: 'Annulée' }
 ]
 
-// ----- PDF AVEC html2pdf.js -----
+// ----- PDF AVEC html2pdf.js (optionnel, peut être retiré si tu ne veux plus le bouton PDF) -----
 const handleDownloadPdfHtml2Pdf = async (id: string, number: string) => {
   const token = localStorage.getItem("token")
   if (!token) {
@@ -111,13 +111,14 @@ function showConfirmToast(message: string, onConfirm: () => void) {
   )
 }
 
-function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
+// ----------- Affichage du toast avec bouton "Afficher" ------------
+function useEffectToastOnRedirect() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const toastData = sessionStorage.getItem("showInvoiceToast")
       if (toastData) {
-        const { number } = JSON.parse(toastData)
-        if (number) {
+        const { id } = JSON.parse(toastData)
+        if (id) {
           toast.success(
             <span>
               Facture générée avec succès&nbsp;
@@ -131,7 +132,7 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
                   padding: 0,
                   font: "inherit",
                 }}
-                onClick={() => handleShowPdf(number)}
+                onClick={() => window.open(`/dashboard/factures/${id}/pdf`, "_blank")}
               >
                 Afficher
               </button>
@@ -144,7 +145,7 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
         sessionStorage.removeItem("showInvoiceToast")
       }
     }
-  }, [handleShowPdf])
+  }, [])
 }
 
 // ------------- PAGE -------------
@@ -156,6 +157,8 @@ export default function FacturesPage() {
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null)
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
   const [selected, setSelected] = useState<string[]>([])
+
+  useEffectToastOnRedirect()
 
   useEffect(() => {
     const fetchQuota = async () => {
@@ -196,8 +199,6 @@ export default function FacturesPage() {
     }
     fetchFactures()
   }, [])
-
-  useEffectToastOnRedirect(() => {}) // tu peux supprimer si plus d’usage
 
   // Sélection groupée
   const toggleSelect = (id: string) => {
@@ -543,7 +544,7 @@ export default function FacturesPage() {
                           fontSize: "1.2em"
                         }}
                       >
-                        📄 PDF
+                        📄
                       </button>
                       <button
                         title="Supprimer"
