@@ -1,26 +1,21 @@
-import { Response, NextFunction } from 'express';
+// frontend/src/lib/middlewares/checkDocumentQuota.ts
+
 import prisma from '@/lib/prisma';
-import { AuthenticatedRequest } from '@/lib/middlewares/authenticateToken';
 
 /**
- * Middleware to enforce a 5-document-per-month limit on FREEMIUM users.
- * Requires authenticateToken to populate req.user with { userId }.
+ * Vérifie si l'utilisateur (FREEMIUM) a le droit de créer un nouveau document (facture, devis).
+ * Retourne true si quota OK, false si quota dépassé.
+ * 
+ * @param userId - ID de l'utilisateur connecté
+ * @returns {Promise<{ allowed: boolean, used: number, quota: number }>}
  */
-export async function checkDocumentQuota(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-) {
-  const userId = req.user?.userId;
-  if (!userId) {
-    return res.status(401).json({ error: 'Non authentifié' });
-  }
-
+export async function checkDocumentQuota(userId: string): Promise<{ allowed: boolean, used: number, quota: number }> {
   const userRecord = await prisma.user.findUnique({ where: { id: userId } });
   const currentPlan = userRecord?.currentPlan ?? 'FREEMIUM';
 
+  // Si ce n'est pas un plan freemium, pas de limite
   if (currentPlan !== 'FREEMIUM') {
-    return next();
+    return { allowed: true, used: 0, quota: 5 };
   }
 
   const now = new Date();
@@ -37,16 +32,8 @@ export async function checkDocumentQuota(
     where: { userId, createdAt: { gte: monthStart, lte: monthEnd } }
   });
 
-  // (Tu pourras ajouter contractsCount plus tard si tu veux)
   const totalDocs = invoicesCount + quotesCount;
+  const quota = 5;
 
-  if (totalDocs >= 5) {
-    return res.status(403).json({
-      error: 'Limite atteinte : l’offre FREEMIUM permet de générer 5 documents par mois.',
-      used: totalDocs,
-      quota: 5,
-    });
-  }
-
-  next();
+  return { allowed: totalDocs < quota, used: totalDocs, quota };
 }
