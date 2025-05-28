@@ -7,11 +7,10 @@ import {
   StyleSheet
 } from "@react-pdf/renderer";
 
-// Affichage montant robuste (gère string "13123.5" ou nombre, et évite les '/')
-const formatEuro = (v: number|string) => {
+// Formatage robuste des montants (corrige "1/000" et autres formats douteux)
+const formatEuro = (v: number | string) => {
   if (typeof v === "string") {
     v = v.replace(/[^\d.,-]/g, "").replace(",", ".");
-    v = v.replace(/(\d)\.(\d{3})/, "$1$2"); // supprime les points de milliers
   }
   const n = Number(v);
   if (isNaN(n)) return typeof v === "string" ? v + " €" : "0,00 €";
@@ -59,7 +58,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontWeight: "bold",
     marginTop: 8,
-    marginBottom: 24 // Pour donner l'espace demandé
+    marginBottom: 24
   },
   siret: {
     fontWeight: "normal",
@@ -176,10 +175,9 @@ const styles = StyleSheet.create({
   }
 });
 
-// --- PROPS ---
 type InvoiceItem = {
   description: string;
-  quantity: number;
+  quantity: number | string;
   unitPrice: number | string;
   vatRate: number;
   totalHT: number | string;
