@@ -138,6 +138,7 @@ model Invoice {
   totalTVA Float
   totalTTC Float
 
+  invoiceTitle  String?
   paymentInfo   String? // <-- infos de paiement (IBAN, instructions, etc)
   iban String?
   bic  String?
