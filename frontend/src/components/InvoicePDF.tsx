@@ -301,36 +301,32 @@ export const InvoicePDF = ({
             </View>
           ))}
         </View>
-        {/* TOTAUX - TABLEAU à droite */}
-        <View style={styles.totalsBox}>
-          <View style={styles.totalsTable}>
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Total HT</Text>
-              <Text style={styles.totalsValue}>{formatEuro(totalHT)}</Text>
-            </View>
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Total TVA :</Text>
-              <Text style={styles.totalsValue}>{formatEuro(totalTVA)}</Text>
-            </View>
-            <View style={styles.totalsRowLast}>
-              <Text style={styles.totalsLabel}>Total TTC</Text>
-              <Text style={styles.totalsValue}>{formatEuro(totalTTC)}</Text>
+        {/* PAIEMENT + TOTALS côte à côte */}
+        <View style={{ flexDirection: "row", width: "100%", marginTop: 22 }}>
+          <View style={{ width: "50%" }}>
+            {paymentInfo && (
+              <View style={styles.paiementBlock}>
+                <Text>{paymentInfo}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.totalsBox}>
+            <View style={styles.totalsTable}>
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Total HT</Text>
+                <Text style={styles.totalsValue}>{formatEuro(totalHT)}</Text>
+              </View>
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Total TVA :</Text>
+                <Text style={styles.totalsValue}>{formatEuro(totalTVA)}</Text>
+              </View>
+              <View style={styles.totalsRowLast}>
+                <Text style={styles.totalsLabel}>Total TTC</Text>
+                <Text style={styles.totalsValue}>{formatEuro(totalTTC)}</Text>
+              </View>
             </View>
           </View>
         </View>
-        {/* INFOS DE PAIEMENT */}
-        {(paymentInfo || iban || bic) && (
-          <View style={styles.paiementBlock}>
-            <Text>Informations de paiement :</Text>
-            {paymentInfo && <Text>{paymentInfo}</Text>}
-            {iban && <Text>IBAN : {iban}</Text>}
-            {bic && <Text>BIC : {bic}</Text>}
-          </View>
-        )}
-        {/* LEGAL */}
-        <Text style={styles.note}>
-          TVA non applicable, art. 293B du CGI.
-        </Text>
       </Page>
     </Document>
   );
