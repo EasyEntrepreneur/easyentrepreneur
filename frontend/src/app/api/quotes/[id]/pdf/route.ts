@@ -20,6 +20,7 @@ export async function GET(
 ) {
   const { id } = context.params
 
+  // Récupération du devis + lignes + client + user et companyInfo
   const quote = await prisma.quote.findUnique({
     where: { id },
     include: {
@@ -33,15 +34,15 @@ export async function GET(
     return NextResponse.json({ error: "Devis introuvable" }, { status: 404 })
   }
 
-  // Police Roboto
+  // ==== Chemin vers la police Roboto ====
   const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
   if (!fs.existsSync(fontPath)) {
     return NextResponse.json({ error: "Police non trouvée" }, { status: 500 })
   }
+
+  // --- Création PDF ---
   const doc = new PDFDocument({ margin: 40 })
   doc.registerFont('Roboto', fontPath)
-
-  // Toujours utiliser Roboto
   doc.font('Roboto')
 
   const chunks: Buffer[] = []
@@ -52,7 +53,10 @@ export async function GET(
   doc.font('Roboto').fontSize(22).text(`Devis n°${quote.number}`, { align: 'center' })
   doc.moveDown(0.5)
   doc.font('Roboto').fontSize(12)
-  doc.text(`Émise le : ${new Date(quote.issuedAt).toLocaleDateString("fr-FR")}`)
+  doc.text(`Émis le : ${new Date(quote.issuedAt).toLocaleDateString("fr-FR")}`)
+  if (quote.validUntil) {
+    doc.text(`Valable jusqu'au : ${new Date(quote.validUntil).toLocaleDateString("fr-FR")}`)
+  }
   doc.text(`Statut : ${quote.statut}`)
   doc.moveDown(0.5)
 
@@ -87,6 +91,7 @@ export async function GET(
   doc.text('Total TTC', 435, doc.y, { width: 70, align: 'right' })
   doc.moveDown(0.3)
 
+  // TVA Map pour total par taux
   const tvaMap: Record<string, number> = {}
 
   for (const item of quote.items as QuoteItem[]) {
@@ -98,17 +103,20 @@ export async function GET(
     doc.text(item.totalHT.toFixed(2), 370, doc.y, { width: 60, align: 'right', continued: true })
     doc.text(item.totalTTC.toFixed(2), 435, doc.y, { width: 70, align: 'right' })
     doc.moveDown(0.2)
+    // Calcule le montant TVA par taux
     const taux = (item.vatRate || 0).toFixed(2)
     tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA
   }
 
   doc.moveDown(1)
 
+  // === TOTAUX ===
   doc.font('Roboto')
   doc.text('Total HT', 340, doc.y, { continued: true })
   doc.text(quote.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
+  // Affichage TVA(s) par taux
   Object.entries(tvaMap).forEach(([taux, montant]) => {
     doc.font('Roboto')
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
@@ -123,16 +131,15 @@ export async function GET(
   doc.text('Total TTC', 340, doc.y, { continued: true })
   doc.text(quote.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
 
+  // === NOTES / CONDITIONS ===
+  if (quote.notes) {
+    doc.moveDown(1)
+    doc.font('Roboto').fontSize(10).text('Conditions/Notes :', { underline: true })
+    doc.font('Roboto').fontSize(10).text(quote.notes)
+  }
+
   doc.moveDown(1.5)
   doc.font('Roboto').fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
-
-  if (quote.paymentInfo || quote.iban) {
-    doc.moveDown(1)
-    doc.font('Roboto').fontSize(11).text('Informations de paiement :', { underline: true })
-    if (quote.paymentInfo) doc.text(quote.paymentInfo)
-    if (quote.iban) doc.text(`IBAN : ${quote.iban}`)
-    if (quote.bic) doc.text(`BIC : ${quote.bic}`)
-  }
 
   doc.end()
   await new Promise(resolve => doc.on('end', resolve))
