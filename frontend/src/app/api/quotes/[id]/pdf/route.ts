@@ -2,16 +2,17 @@ import { NextRequest } from "next/server";
 import puppeteer from "puppeteer";
 import prisma from "@/lib/prisma";
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
-  const { id: quoteId } = context.params;
+export async function GET(req: NextRequest) {
+  // Récupération de l'id depuis l'URL (format: /api/quotes/xxxx/pdf)
+  const url = new URL(req.url);
+  const segments = url.pathname.split("/");
+  const quoteId = segments[segments.length - 2]; // /api/quotes/[id]/pdf
+
   if (!quoteId) {
     return new Response("ID manquant", { status: 400 });
   }
 
-  // Récupérer la quote depuis Prisma (adapter le include selon ton modèle)
+  // Récupérer le devis depuis Prisma
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
     include: { items: true, client: true },
@@ -21,7 +22,7 @@ export async function GET(
     return new Response("Devis introuvable", { status: 404 });
   }
 
-  // Générer le HTML pour la Devis (à personnaliser avec ton vrai template !)
+  // Générer le HTML pour le devis (à personnaliser avec ton vrai template !)
   const html = `
     <html>
       <head>

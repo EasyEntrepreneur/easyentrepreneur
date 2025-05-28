@@ -2,16 +2,17 @@ import { NextRequest } from "next/server";
 import puppeteer from "puppeteer";
 import prisma from "@/lib/prisma";
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
-  const { id: invoiceId } = context.params;
+export async function GET(req: NextRequest) {
+  // Récupération de l'id depuis l'URL (format: /api/invoices/xxxx/pdf)
+  const url = new URL(req.url);
+  const segments = url.pathname.split("/");
+  const invoiceId = segments[segments.length - 2]; // /api/invoices/[id]/pdf
+
   if (!invoiceId) {
     return new Response("ID manquant", { status: 400 });
   }
 
-  // Récupérer la facture depuis Prisma (adapter le include selon ton modèle)
+  // Récupérer la facture depuis Prisma
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: { items: true, client: true },
