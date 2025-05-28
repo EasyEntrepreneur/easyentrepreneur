@@ -1,81 +1,154 @@
-import { NextRequest } from "next/server";
-import puppeteer from "puppeteer";
-import prisma from "@/lib/prisma";
-import { supabase } from "@/lib/supabaseAdmin";
-import { v4 as uuidv4 } from "uuid";
+import { NextRequest, NextResponse } from 'next/server'
+import PDFDocument from 'pdfkit'
+import prisma from '@/lib/prisma'
 
-export const dynamic = "force-dynamic";
+// Types Prisma (simples) pour typer les items dans la boucle
+type InvoiceItem = {
+  description: string
+  quantity: number
+  unitPrice: number
+  vatRate: number
+  totalHT: number
+  totalTVA: number
+  totalTTC: number
+}
 
-export async function GET(req: NextRequest) {
-  // Correction: récupère l'id de la route "/api/invoices/[id]/pdf"
-  const url = new URL(req.url);
-  const parts = url.pathname.split("/");
-  // parts: ['', 'api', 'invoices', 'xxxx', 'pdf']
-  const invoiceId = parts[parts.length - 2];
-  if (!invoiceId || invoiceId === "pdf") {
-    return new Response("ID manquant", { status: 400 });
+type Params = {
+  params: {
+    id: string
   }
+}
 
+export async function GET(
+  req: NextRequest,
+  { params }: Params
+) {
+  const { id } = params
+
+  // Récupération de la facture + lignes + client éventuel + user et companyInfo
   const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: { items: true, client: true },
-  });
+    where: { id },
+    include: {
+      items: true,
+      client: true,
+      user: {
+        include: {
+          companyInfo: true
+        }
+      }
+    }
+  })
+
   if (!invoice) {
-    return new Response("Facture introuvable", { status: 404 });
+    return NextResponse.json({ error: "Facture introuvable" }, { status: 404 })
   }
 
-  if (invoice.pdfUrl) {
-    return Response.redirect(invoice.pdfUrl, 302);
+  // --- Création PDF ---
+  const doc = new PDFDocument({ margin: 40 })
+  const chunks: Buffer[] = []
+  doc.on('data', chunk => chunks.push(chunk))
+  doc.on('end', () => {})
+
+  // === HEADER ===
+  doc.fontSize(22).text(`Facture n°${invoice.number}`, { align: 'center' })
+  doc.moveDown(0.5)
+  doc.fontSize(12)
+  doc.text(`Émise le : ${new Date(invoice.issuedAt).toLocaleDateString("fr-FR")}`)
+  doc.text(`Statut : ${invoice.statut}`)
+  doc.moveDown(0.5)
+
+  // === CLIENT & ÉMETTEUR ===
+  doc.fontSize(11)
+  doc.text('Émetteur :', { underline: true })
+  doc.text(invoice.user?.companyInfo?.name || 'Votre société')
+  doc.text(invoice.user?.companyInfo?.address || '')
+  doc.text(
+    [invoice.user?.companyInfo?.zip, invoice.user?.companyInfo?.city].filter(Boolean).join(' ')
+  )
+  if (invoice.user?.companyInfo?.siret) doc.text(`SIRET : ${invoice.user.companyInfo.siret}`)
+  if (invoice.user?.companyInfo?.vat) doc.text(`TVA : ${invoice.user.companyInfo.vat}`)
+
+  doc.moveDown(0.7)
+  doc.text('Client :', { underline: true })
+  doc.text(invoice.clientName)
+  doc.text(invoice.clientAddress)
+  doc.text([invoice.clientZip, invoice.clientCity].filter(Boolean).join(' '))
+  if (invoice.clientEmail) doc.text(`Email : ${invoice.clientEmail}`)
+  if (invoice.clientPhone) doc.text(`Tél : ${invoice.clientPhone}`)
+
+  doc.moveDown(1)
+
+  // === TABLEAU LIGNES ===
+  doc.fontSize(11).font('Helvetica-Bold')
+  doc.text('Désignation', 40, doc.y, { width: 180, continued: true })
+  doc.text('Qté', 230, doc.y, { width: 30, align: 'right', continued: true })
+  doc.text('PU HT', 265, doc.y, { width: 50, align: 'right', continued: true })
+  doc.text('TVA', 320, doc.y, { width: 40, align: 'right', continued: true })
+  doc.text('Total HT', 370, doc.y, { width: 60, align: 'right', continued: true })
+  doc.text('Total TTC', 435, doc.y, { width: 70, align: 'right' })
+  doc.moveDown(0.3)
+  doc.font('Helvetica')
+
+  // TVA Map pour total par taux
+  const tvaMap: Record<string, number> = {}
+
+  for (const item of invoice.items as InvoiceItem[]) {
+    doc.text(item.description, 40, doc.y, { width: 180, continued: true })
+    doc.text(item.quantity.toString(), 230, doc.y, { width: 30, align: 'right', continued: true })
+    doc.text(item.unitPrice.toFixed(2), 265, doc.y, { width: 50, align: 'right', continued: true })
+    doc.text((item.vatRate || 0).toFixed(2) + ' %', 320, doc.y, { width: 40, align: 'right', continued: true })
+    doc.text(item.totalHT.toFixed(2), 370, doc.y, { width: 60, align: 'right', continued: true })
+    doc.text(item.totalTTC.toFixed(2), 435, doc.y, { width: 70, align: 'right' })
+    doc.moveDown(0.2)
+    // Calcule le montant TVA par taux
+    const taux = (item.vatRate || 0).toFixed(2)
+    tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA
   }
 
-  const html = `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial; padding: 2rem; }
-          h1 { color: #4f46e5; }
-        </style>
-      </head>
-      <body>
-        <h1>Facture ${invoice.number}</h1>
-        <p>Client: ${invoice.client?.name || ""}</p>
-        <p>Date: ${invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString("fr-FR") : ""}</p>
-        <p>Total: ${invoice.totalTTC?.toLocaleString('fr-FR')} €</p>
-        <hr/>
-        <h2>Prestations :</h2>
-        <ul>
-          ${invoice.items.map((item: any) => `<li>${item.description} - ${item.amount} €</li>`).join("")}
-        </ul>
-      </body>
-    </html>
-  `;
+  doc.moveDown(1)
 
-  const browser = await puppeteer.launch({
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
-  const pdfBuffer = await page.pdf({ format: "A4" });
-  await browser.close();
+  // === TOTAUX ===
+  doc.font('Helvetica-Bold')
+  doc.text('Total HT', 340, doc.y, { continued: true })
+  doc.text(invoice.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
+  doc.moveDown(0.3)
 
-  const filename = `factures/${invoice.number}-${uuidv4()}.pdf`;
-  const { error } = await supabase.storage
-    .from("pdfs")
-    .upload(filename, pdfBuffer, {
-      contentType: "application/pdf",
-      upsert: true,
-    });
+  // Affichage TVA(s) par taux
+  doc.font('Helvetica')
+  Object.entries(tvaMap).forEach(([taux, montant]) => {
+    doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
+    doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
+    doc.moveDown(0.2)
+  })
 
-  if (error) {
-    return new Response("Erreur upload Supabase: " + error.message, { status: 500 });
+  doc.font('Helvetica-Bold')
+  doc.text('Total TVA', 340, doc.y, { continued: true })
+  doc.text(invoice.totalTVA.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
+  doc.moveDown(0.3)
+  doc.text('Total TTC', 340, doc.y, { continued: true })
+  doc.text(invoice.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
+
+  doc.moveDown(1.5)
+  doc.font('Helvetica').fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+
+  // === INFOS DE PAIEMENT (optionnel) ===
+  if (invoice.paymentInfo || invoice.iban) {
+    doc.moveDown(1)
+    doc.fontSize(11).text('Informations de paiement :', { underline: true })
+    if (invoice.paymentInfo) doc.text(invoice.paymentInfo)
+    if (invoice.iban) doc.text(`IBAN : ${invoice.iban}`)
+    if (invoice.bic) doc.text(`BIC : ${invoice.bic}`)
   }
 
-  const pdfUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/pdfs/${filename}`;
+  doc.end()
+  await new Promise(resolve => doc.on('end', resolve))
+  const pdfBuffer = Buffer.concat(chunks)
 
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { pdfUrl },
-  });
-
-  return Response.redirect(pdfUrl, 302);
+  return new NextResponse(pdfBuffer, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="Facture-${invoice.number}.pdf"`,
+    },
+  })
 }
