@@ -54,14 +54,14 @@ const styles = StyleSheet.create({
   },
   table: {
     width: "100%",
-    borderWidth: 0,
     marginTop: 8,
     marginBottom: 8
   },
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottom: `1px solid #dbeafe`,
+    borderBottomWidth: 1,
+    borderBottomColor: "#dbeafe",
     minHeight: 28
   },
   tableHeader: {
@@ -71,31 +71,36 @@ const styles = StyleSheet.create({
   cellDesc: {
     flex: 3,
     padding: 6,
-    borderRight: `1px solid #dbeafe`
+    borderRightWidth: 1,
+    borderRightColor: "#dbeafe"
   },
   cellQty: {
     flex: 1,
     padding: 6,
     textAlign: "center",
-    borderRight: `1px solid #dbeafe`
+    borderRightWidth: 1,
+    borderRightColor: "#dbeafe"
   },
   cellPrice: {
     flex: 1.5,
     padding: 6,
     textAlign: "right",
-    borderRight: `1px solid #dbeafe`
+    borderRightWidth: 1,
+    borderRightColor: "#dbeafe"
   },
   cellTva: {
     flex: 1.2,
     padding: 6,
     textAlign: "right",
-    borderRight: `1px solid #dbeafe`
+    borderRightWidth: 1,
+    borderRightColor: "#dbeafe"
   },
   cellTotalHT: {
     flex: 1.7,
     padding: 6,
     textAlign: "right",
-    borderRight: `1px solid #dbeafe`
+    borderRightWidth: 1,
+    borderRightColor: "#dbeafe"
   },
   cellTotalTTC: {
     flex: 1.7,
