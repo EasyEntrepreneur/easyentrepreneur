@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
     iban,
     bic,
     items,
-    invoiceHtml, // <-- utilisé pour la génération PDF côté client
+    invoiceHtml,
+    invoiceTitle,
+    paymentInfo, // <-- utilisé pour la génération PDF côté client
     ...rest
   } = body
 
@@ -147,7 +149,9 @@ export async function POST(req: NextRequest) {
       totalTVA,
       totalTTC,
       items: { createMany: { data: invoiceItems } },
-      invoiceHtml, // Stocké pour permettre la génération PDF côté client
+      invoiceHtml,
+      invoiceTitle,
+      paymentInfo,
     },
     include: { items: true, client: true },
   })
