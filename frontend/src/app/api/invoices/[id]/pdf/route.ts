@@ -4,6 +4,9 @@ import prisma from '@/lib/prisma'
 import path from 'path'
 import fs from 'fs'
 
+// Chemin absolu police Roboto
+const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
+
 type InvoiceItem = {
   description: string
   quantity: number
@@ -20,6 +23,7 @@ export async function GET(
 ) {
   const { id } = context.params
 
+  // Récupération de la facture complète
   const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
@@ -33,15 +37,13 @@ export async function GET(
     return NextResponse.json({ error: "Facture introuvable" }, { status: 404 })
   }
 
-  // Police Roboto
-  const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
+  // Vérifier police Roboto
   if (!fs.existsSync(fontPath)) {
-    return NextResponse.json({ error: "Police non trouvée" }, { status: 500 })
+    return NextResponse.json({ error: "Police Roboto non trouvée" }, { status: 500 })
   }
+
   const doc = new PDFDocument({ margin: 40 })
   doc.registerFont('Roboto', fontPath)
-
-  // Toujours utiliser Roboto
   doc.font('Roboto')
 
   const chunks: Buffer[] = []
@@ -49,15 +51,15 @@ export async function GET(
   doc.on('end', () => {})
 
   // === HEADER ===
-  doc.font('Roboto').fontSize(22).text(`Facture n°${invoice.number}`, { align: 'center' })
+  doc.fontSize(22).text(`Facture n°${invoice.number}`, { align: 'center' })
   doc.moveDown(0.5)
-  doc.font('Roboto').fontSize(12)
+  doc.fontSize(12)
   doc.text(`Émise le : ${new Date(invoice.issuedAt).toLocaleDateString("fr-FR")}`)
   doc.text(`Statut : ${invoice.statut}`)
   doc.moveDown(0.5)
 
   // === CLIENT & ÉMETTEUR ===
-  doc.font('Roboto').fontSize(11)
+  doc.fontSize(11)
   doc.text('Émetteur :', { underline: true })
   doc.text(invoice.user?.companyInfo?.name || 'Votre société')
   doc.text(invoice.user?.companyInfo?.address || '')
@@ -78,7 +80,7 @@ export async function GET(
   doc.moveDown(1)
 
   // === TABLEAU LIGNES ===
-  doc.font('Roboto').fontSize(11)
+  doc.fontSize(11)
   doc.text('Désignation', 40, doc.y, { width: 180, continued: true })
   doc.text('Qté', 230, doc.y, { width: 30, align: 'right', continued: true })
   doc.text('PU HT', 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -90,7 +92,6 @@ export async function GET(
   const tvaMap: Record<string, number> = {}
 
   for (const item of invoice.items as InvoiceItem[]) {
-    doc.font('Roboto')
     doc.text(item.description, 40, doc.y, { width: 180, continued: true })
     doc.text(item.quantity.toString(), 230, doc.y, { width: 30, align: 'right', continued: true })
     doc.text(item.unitPrice.toFixed(2), 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -104,19 +105,16 @@ export async function GET(
 
   doc.moveDown(1)
 
-  doc.font('Roboto')
   doc.text('Total HT', 340, doc.y, { continued: true })
   doc.text(invoice.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
   Object.entries(tvaMap).forEach(([taux, montant]) => {
-    doc.font('Roboto')
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
     doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
     doc.moveDown(0.2)
   })
 
-  doc.font('Roboto')
   doc.text('Total TVA', 340, doc.y, { continued: true })
   doc.text(invoice.totalTVA.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
@@ -124,11 +122,12 @@ export async function GET(
   doc.text(invoice.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
 
   doc.moveDown(1.5)
-  doc.font('Roboto').fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+  doc.fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
 
+  // Infos paiement éventuelles
   if (invoice.paymentInfo || invoice.iban) {
     doc.moveDown(1)
-    doc.font('Roboto').fontSize(11).text('Informations de paiement :', { underline: true })
+    doc.fontSize(11).text('Informations de paiement :', { underline: true })
     if (invoice.paymentInfo) doc.text(invoice.paymentInfo)
     if (invoice.iban) doc.text(`IBAN : ${invoice.iban}`)
     if (invoice.bic) doc.text(`BIC : ${invoice.bic}`)
