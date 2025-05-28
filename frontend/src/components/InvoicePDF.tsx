@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    borderBottomWidth: 1,
+    borderWidth: 1,
     borderColor: "#dbeafe"
 
   },
@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minHeight: 28,
-    borderBottomWidth: 1,
-    borderBottomColor: "#dbeafe"
+    borderWidth: 1,
+    borderColor: "#dbeafe"
   },
   tableHeader: {
     textAlign: "center",
@@ -108,23 +108,18 @@ const styles = StyleSheet.create({
   },
   cellDesc: {
     flex: 3, padding: 6,
-    borderRightWidth: 1, borderRightColor: "#dbeafe"
   },
   cellQty: {
     flex: 1, padding: 6, textAlign: "center",
-    borderRightWidth: 1, borderRightColor: "#dbeafe"
   },
   cellPrice: {
     flex: 1.5, padding: 6, textAlign: "right",
-    borderRightWidth: 1, borderRightColor: "#dbeafe"
   },
   cellTotalHT: {
     flex: 1.7, padding: 6, textAlign: "right",
-    borderRightWidth: 1, borderRightColor: "#dbeafe"
   },
   cellTva: {
     flex: 1.2, padding: 6, textAlign: "right",
-    borderRightWidth: 1, borderRightColor: "#dbeafe"
   },
   cellTotalTTC: {
     flex: 1.7, padding: 6, textAlign: "right"
