@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   // Liste des factures de l'utilisateur
   const invoices = await prisma.invoice.findMany({
     where: { userId },
-    include: { items: true, client: true },
+    include: { items: true, client: true, issuer: true },
     orderBy: { issuedAt: 'desc' }
   })
   return NextResponse.json(invoices)
@@ -129,6 +129,51 @@ export async function POST(req: NextRequest) {
     dbClient = await prisma.client.create({ data: clientToInsert })
   }
 
+  // === GESTION EMETTEUR (CREATE/UPDATE SI NON EXISTANT) ===
+  let dbIssuer = null
+  if (issuer?.siret) {
+    dbIssuer = await prisma.issuer.findFirst({ where: { userId, siret: issuer.siret } });
+  }
+  if (!dbIssuer) {
+    dbIssuer = await prisma.issuer.findFirst({
+      where: {
+        userId,
+        name: issuer.name,
+        address: issuer.address,
+        zip: issuer.zip,
+        city: issuer.city,
+      }
+    })
+  }
+  if (!dbIssuer) {
+    const issuerToInsert = {
+      name: issuer.name,
+      address: issuer.address,
+      zip: issuer.zip,
+      city: issuer.city,
+      siret: issuer.siret || "",
+      vat: issuer.vat || "",
+      phone: issuer.phone || "",
+      userId,
+      // extra: issuer.extra ? JSON.stringify(issuer.extra) : undefined, // si tu veux stocker extra
+    }
+    dbIssuer = await prisma.issuer.create({ data: issuerToInsert })
+  } else {
+    dbIssuer = await prisma.issuer.update({
+      where: { id: dbIssuer.id },
+      data: {
+        name: issuer.name,
+        address: issuer.address,
+        zip: issuer.zip,
+        city: issuer.city,
+        siret: issuer.siret || "",
+        vat: issuer.vat || "",
+        phone: issuer.phone || "",
+        // extra: issuer.extra ? JSON.stringify(issuer.extra) : undefined,
+      }
+    })
+  }
+
   // Création de la facture (stocke l'HTML, pas de PDF)
   const newInvoice = await prisma.invoice.create({
     data: {
@@ -142,6 +187,7 @@ export async function POST(req: NextRequest) {
       clientCity: client.city,
       clientEmail: client.email,
       clientPhone: client.phone,
+      issuerId: dbIssuer.id, // <-- RELIE L'EMETTEUR
       dueAt: dueAt ? new Date(dueAt) : undefined,
       totalHT,
       totalTVA,
@@ -152,7 +198,7 @@ export async function POST(req: NextRequest) {
       paymentInfo,
       legalNote,
     },
-    include: { items: true, client: true },
+    include: { items: true, client: true, issuer: true },
   })
 
   return NextResponse.json({ ...newInvoice })
