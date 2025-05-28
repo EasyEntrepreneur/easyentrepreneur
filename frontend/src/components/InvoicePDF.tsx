@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     width: "100%"
   },
   emitterBlock: {
-    width: "48%",
+    width: "100%",
     fontWeight: "bold"
   },
   clientBlockWrap: {
@@ -54,14 +54,14 @@ const styles = StyleSheet.create({
     marginTop: 0
   },
   clientBlock: {
-    width: "48%",
+    width: "100%",
     textAlign: "right",
     fontWeight: "bold",
     marginTop: 8,
     marginBottom: 24
   },
   siret: {
-    fontWeight: "normal",
+    fontWeight: "bold",
     fontSize: 10,
     marginTop: 2
   },
