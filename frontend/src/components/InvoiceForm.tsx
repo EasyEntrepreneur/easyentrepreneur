@@ -263,7 +263,8 @@ export default function InvoiceForm({
       totalHT,
       totalVAT,
       totalTTC,
-      invoiceHtml, // ← ENVOI DU HTML DANS LE BODY
+      invoiceHtml,  // ← ENVOI DU HTML DANS LE BODY
+      invoiceTitle, 
     };
 
     try {

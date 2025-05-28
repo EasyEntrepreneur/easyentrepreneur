@@ -139,6 +139,7 @@ model Invoice {
   totalTTC Float
 
   invoiceTitle  String?
+  legalNote     String?
   paymentInfo   String? // <-- infos de paiement (IBAN, instructions, etc)
   invoiceHtml     String?
 
