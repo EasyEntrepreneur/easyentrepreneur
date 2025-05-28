@@ -17,8 +17,8 @@ const formatEuro = (v: number | string) => {
   return (
     n
       .toLocaleString("fr-FR", { minimumFractionDigits: 2 })
-      .replace(/\u202F|\u00A0/g, " ") // Séparateur espace insécable → espace simple
-      .replace(/\//g, " ") // Sécurité si jamais
+      .replace(/\u202F|\u00A0/g, " ") // Espace insécable → espace simple
+      .replace(/\//g, " ")            // Sécurité : slashs
     + " €"
   );
 };
@@ -78,7 +78,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#dbeafe"
-
   },
   dateLabel: {
     backgroundColor: "#e5eafe",
@@ -195,6 +194,8 @@ type CompanyInfo = {
   city?: string;
   siret?: string;
   vat?: string;
+  phone?: string;
+  extra?: string[]; // Champs libres dynamiques
 };
 type InvoicePDFProps = {
   invoiceTitle: string;
@@ -202,16 +203,7 @@ type InvoicePDFProps = {
   statut: string;
   issuer: CompanyInfo;
   legalNote?: string | null;
-  client: {
-    name: string;
-    address: string;
-    zip: string;
-    city: string;
-    phone?: string;
-    email?: string;
-    vat?: string;
-    siret?: string;
-  };
+  client: CompanyInfo;
   items: InvoiceItem[];
   totalHT: number | string;
   totalTVA: number | string;
@@ -229,7 +221,7 @@ export const InvoicePDF = ({
   totalTVA,
   totalTTC,
   paymentInfo,
-  legalNote // <-- AJOUT !
+  legalNote
 }: InvoicePDFProps) => {
   return (
     <Document>
@@ -254,6 +246,13 @@ export const InvoicePDF = ({
             {issuer.vat && (
               <Text style={styles.siret}>TVA : {issuer.vat}</Text>
             )}
+            {issuer.phone && (
+              <Text style={styles.siret}>Tél : {issuer.phone}</Text>
+            )}
+            {/* Champs dynamiques émetteur */}
+            {issuer.extra?.map(
+              (val, i) => val ? <Text style={styles.siret} key={i}>{val}</Text> : null
+            )}
           </View>
         </View>
         {/* INFOS CLIENT EN DESSOUS À DROITE */}
@@ -269,6 +268,13 @@ export const InvoicePDF = ({
             )}
             {client.vat && (
               <Text style={styles.siret}>TVA : {client.vat}</Text>
+            )}
+            {client.phone && (
+              <Text style={styles.siret}>Tél : {client.phone}</Text>
+            )}
+            {/* Champs dynamiques client */}
+            {client.extra?.map(
+              (val, i) => val ? <Text style={styles.siret} key={i}>{val}</Text> : null
             )}
           </View>
         </View>
