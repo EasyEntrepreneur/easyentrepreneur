@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import prisma from '@/lib/prisma'
+import path from 'path'
 
 type InvoiceItem = {
   description: string
@@ -18,17 +19,12 @@ export async function GET(
 ) {
   const { id } = context.params
 
-  // Récupération de la facture + lignes + client éventuel + user et companyInfo
   const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
       items: true,
       client: true,
-      user: {
-        include: {
-          companyInfo: true
-        }
-      }
+      user: { include: { companyInfo: true } }
     }
   })
 
@@ -36,8 +32,12 @@ export async function GET(
     return NextResponse.json({ error: "Facture introuvable" }, { status: 404 })
   }
 
-  // --- Création PDF ---
+  // Utilise le chemin du fichier TTF Roboto variable (PAS Helvetica !)
+  const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
   const doc = new PDFDocument({ margin: 40 })
+  doc.registerFont('Roboto', fontPath)
+  doc.font('Roboto')
+
   const chunks: Buffer[] = []
   doc.on('data', chunk => chunks.push(chunk))
   doc.on('end', () => {})
@@ -92,19 +92,16 @@ export async function GET(
     doc.text(item.totalHT.toFixed(2), 370, doc.y, { width: 60, align: 'right', continued: true })
     doc.text(item.totalTTC.toFixed(2), 435, doc.y, { width: 70, align: 'right' })
     doc.moveDown(0.2)
-    // Calcule le montant TVA par taux
     const taux = (item.vatRate || 0).toFixed(2)
     tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA
   }
 
   doc.moveDown(1)
 
-  // === TOTAUX ===
   doc.text('Total HT', 340, doc.y, { continued: true })
   doc.text(invoice.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
-  // Affichage TVA(s) par taux
   Object.entries(tvaMap).forEach(([taux, montant]) => {
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
     doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
@@ -120,7 +117,6 @@ export async function GET(
   doc.moveDown(1.5)
   doc.fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
 
-  // === INFOS DE PAIEMENT (optionnel) ===
   if (invoice.paymentInfo || invoice.iban) {
     doc.moveDown(1)
     doc.fontSize(11).text('Informations de paiement :', { underline: true })

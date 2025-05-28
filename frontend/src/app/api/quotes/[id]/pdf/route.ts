@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import prisma from '@/lib/prisma'
+import path from 'path'
 
 type QuoteItem = {
   description: string
@@ -18,17 +19,13 @@ export async function GET(
 ) {
   const { id } = context.params
 
-  // Récupération du devis + lignes + client + user et companyInfo
+  // Récupération du devis + lignes + client éventuel + user et companyInfo
   const quote = await prisma.quote.findUnique({
     where: { id },
     include: {
       items: true,
       client: true,
-      user: {
-        include: {
-          companyInfo: true
-        }
-      }
+      user: { include: { companyInfo: true } }
     }
   })
 
@@ -36,8 +33,12 @@ export async function GET(
     return NextResponse.json({ error: "Devis introuvable" }, { status: 404 })
   }
 
-  // --- Création PDF ---
+  // --- Chargement police Roboto ---
+  const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
   const doc = new PDFDocument({ margin: 40 })
+  doc.registerFont('Roboto', fontPath)
+  doc.font('Roboto')
+
   const chunks: Buffer[] = []
   doc.on('data', chunk => chunks.push(chunk))
   doc.on('end', () => {})
@@ -95,7 +96,6 @@ export async function GET(
     doc.text(item.totalHT.toFixed(2), 370, doc.y, { width: 60, align: 'right', continued: true })
     doc.text(item.totalTTC.toFixed(2), 435, doc.y, { width: 70, align: 'right' })
     doc.moveDown(0.2)
-    // Calcule le montant TVA par taux
     const taux = (item.vatRate || 0).toFixed(2)
     tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA
   }
@@ -107,7 +107,6 @@ export async function GET(
   doc.text(quote.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
-  // Affichage TVA(s) par taux
   Object.entries(tvaMap).forEach(([taux, montant]) => {
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
     doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
