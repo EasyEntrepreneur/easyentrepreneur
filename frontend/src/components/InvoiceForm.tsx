@@ -92,10 +92,8 @@ export default function InvoiceForm({
     setLineVats((old) => {
       const copy = [...old];
       if (copy.length < items.length) {
-        // ajout de ligne
         return [...copy, settings.vatRate];
       } else if (copy.length > items.length) {
-        // suppression de ligne
         return copy.slice(0, items.length);
       }
       return copy;
@@ -282,7 +280,6 @@ export default function InvoiceForm({
       });
 
       if (res.status === 403) {
-        // Bloc quota FREEMIUM atteint !
         const data = await res.json();
         toast.error(data.error || "Quota atteint : Vous avez atteint la limite de 5 documents par mois avec l’offre FREEMIUM. Passez à une offre supérieure pour continuer.", {
           duration: 7000,
@@ -313,16 +310,38 @@ export default function InvoiceForm({
         factureNumber = data?.number || null;
       } catch {}
 
-      // Stocke le number pour le toast de la page /dashboard/factures
+      // Toast avec bouton "Afficher"
+      if (pdfUrl) {
+        toast.success(
+          <div>
+            Facture générée avec succès&nbsp;!
+            <button
+              style={{
+                marginLeft: 12,
+                padding: "4px 12px",
+                background: "#4f46e5",
+                color: "#fff",
+                borderRadius: 6,
+                border: "none",
+                cursor: "pointer"
+              }}
+              onClick={() => window.open(pdfUrl, "_blank")}
+            >
+              Afficher
+            </button>
+          </div>,
+          { duration: 10000 }
+        );
+      }
+
       sessionStorage.setItem(
         "showInvoiceToast",
         JSON.stringify({
           number: factureNumber,
-          pdfUrl: `/dashboard/factures/${factureNumber}/pdf`
+          pdfUrl: pdfUrl,
         })
       );
 
-      // Rediriger vers la liste des factures
       router.push("/dashboard/factures");
 
     } catch (err: any) {
@@ -335,13 +354,10 @@ export default function InvoiceForm({
     }
   };
 
-  // Pas besoin d'afficher le toast ici, il sera affiché dans la page des factures via un useEffect
-
   return (
     <>
       <form className={styles.form} onSubmit={handleSubmit}>
-        {/* ...le reste de ton formulaire inchangé... */}
-
+        {/* ... Ton formulaire complet inchangé ... */}
         {/* ── HEADER ─────────────────────────────────────────────────────────── */}
         <div className={styles.header}>
           <h1 className={styles.title}>

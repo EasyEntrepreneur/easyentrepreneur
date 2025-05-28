@@ -283,9 +283,11 @@ export default function QuoteForm({
 
       if (res.status === 403) {
         const data = await res.json();
-        toast.error(data.error || "Quota atteint : Vous avez atteint la limite de documents avec l’offre FREEMIUM. Passez à une offre supérieure pour continuer.", {
-          duration: 7000,
-        });
+        toast.error(
+          data.error ||
+            "Quota atteint : Vous avez atteint la limite de documents avec l’offre FREEMIUM. Passez à une offre supérieure pour continuer.",
+          { duration: 7000 }
+        );
         setLoading(false);
         return;
       }
@@ -311,16 +313,38 @@ export default function QuoteForm({
         quoteNumber = data?.number || null;
       } catch {}
 
+      if (pdfUrl) {
+        toast.success(
+          <div>
+            Devis généré avec succès&nbsp;!
+            <button
+              style={{
+                marginLeft: 12,
+                padding: "4px 12px",
+                background: "#4f46e5",
+                color: "#fff",
+                borderRadius: 6,
+                border: "none",
+                cursor: "pointer"
+              }}
+              onClick={() => window.open(pdfUrl, "_blank")}
+            >
+              Afficher
+            </button>
+          </div>,
+          { duration: 10000 }
+        );
+      }
+
       sessionStorage.setItem(
         "showQuoteToast",
         JSON.stringify({
           number: quoteNumber,
-          pdfUrl: `/dashboard/devis/${quoteNumber}/pdf`
+          pdfUrl: pdfUrl,
         })
       );
 
       router.push("/dashboard/devis");
-
     } catch (err: any) {
       toast.error(
         err?.message || "Erreur lors de la création du devis !",

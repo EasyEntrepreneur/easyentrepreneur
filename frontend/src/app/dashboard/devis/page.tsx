@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import styles from './devis.module.css'
 import toast from "react-hot-toast"
 import RevenueChart from '@/components/RevenueChart'
@@ -19,7 +19,6 @@ type Devis = {
   clientName: string
   issuedAt: string
   totalTTC: number
-  pdfUrl: string
   statut: QuoteStatus
 }
 
@@ -35,58 +34,32 @@ const STATUTS: { value: QuoteStatus, label: string }[] = [
   { value: 'REFUSE', label: 'Refusé' }
 ];
 
-// ---- FONCTIONS INTERNES ----
-
-const handleDownloadPdf = async (number: string) => {
-  const token = localStorage.getItem("token");
+// Affiche le PDF dans un nouvel onglet avec toast
+const handleShowOrDownloadPdf = async (id: string, number: string) => {
+  const token = localStorage.getItem("token")
   if (!token) {
-    toast.error("Veuillez vous reconnecter");
-    return;
+    toast.error("Veuillez vous reconnecter")
+    return
   }
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quotes/${number}/pdf`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Erreur lors du téléchargement du PDF");
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Devis-${number}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
+    const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/quotes/${id}/pdf`
+    const res = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!res.ok) throw new Error("Impossible de récupérer le PDF")
+    const blob = await res.blob()
+    const pdfUrl = window.URL.createObjectURL(blob)
+    window.open(pdfUrl, '_blank')
+    toast.success("PDF généré et affiché !")
+    // Pour download auto :
+    // const link = document.createElement('a')
+    // link.href = pdfUrl
+    // link.download = `Devis-${number}.pdf`
+    // link.click()
   } catch (e) {
-    console.error("Erreur création devis :", e);
-    toast.error("Impossible de télécharger le PDF");
+    toast.error("Erreur lors de la récupération du PDF")
   }
-};
-
-const handleShowPdf = async (number: string) => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    toast.error("Veuillez vous reconnecter");
-    return;
-  }
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quotes/${number}/pdf`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Erreur lors du téléchargement du PDF");
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => window.URL.revokeObjectURL(url), 5000);
-  } catch (e) {
-    console.error("Erreur création devis :", e);
-    toast.error("Impossible d'ouvrir le PDF");
-  }
-};
+}
 
 function showConfirmToast(message: string, onConfirm: () => void) {
   toast(
@@ -120,13 +93,13 @@ function showConfirmToast(message: string, onConfirm: () => void) {
   );
 }
 
-function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
+function useEffectToastOnRedirect(showPdf: (id: string, number: string) => void) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const toastData = sessionStorage.getItem("showQuoteToast");
       if (toastData) {
-        const { number } = JSON.parse(toastData);
-        if (number) {
+        const { id, number } = JSON.parse(toastData);
+        if (id && number) {
           toast.success(
             <span>
               Devis généré avec succès&nbsp;
@@ -140,7 +113,7 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
                   padding: 0,
                   font: "inherit",
                 }}
-                onClick={() => handleShowPdf(number)}
+                onClick={() => handleShowOrDownloadPdf(id, number)}
               >
                 Afficher
               </button>
@@ -153,7 +126,7 @@ function useEffectToastOnRedirect(handleShowPdf: (number: string) => void) {
         sessionStorage.removeItem("showQuoteToast");
       }
     }
-  }, [handleShowPdf]);
+  }, [showPdf]);
 }
 
 // ------------- PAGE -------------
@@ -163,19 +136,20 @@ export default function DevisPage() {
   const [filtreStatut, setFiltreStatut] = useState<'Tous' | QuoteStatus>('Tous');
   const [loading, setLoading] = useState(true);
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
-
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
-
   const [selected, setSelected] = useState<string[]>([]);
+
+  // Callback stable
+  const handleShowPdf = useCallback((id: string, number: string) => {
+    handleShowOrDownloadPdf(id, number)
+  }, [])
 
   useEffect(() => {
     const fetchQuota = async () => {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quota`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error();
         const data = await res.json();
@@ -193,9 +167,7 @@ export default function DevisPage() {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quotes`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         setDevis(
@@ -205,7 +177,6 @@ export default function DevisPage() {
           }))
         );
       } catch (err) {
-        console.error("Erreur création devis :", err);
         toast.error("Impossible de charger les devis");
       }
       setLoading(false);
@@ -234,9 +205,7 @@ export default function DevisPage() {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/quotes/${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error();
         setDevis((devis) => devis.filter((d) => d.id !== id));
@@ -554,8 +523,9 @@ export default function DevisPage() {
                   </td>
                   <td>
                     <div className={styles.actions}>
+                      {/* Afficher PDF (icone oeil) */}
                       <button
-                        onClick={() => handleShowPdf(devisItem.number)}
+                        onClick={() => handleShowOrDownloadPdf(devisItem.id, devisItem.number)}
                         title="Afficher le devis PDF"
                         style={{
                           background: "none",
@@ -564,10 +534,11 @@ export default function DevisPage() {
                           fontSize: "1.2em"
                         }}
                       >
-                        📄
+                        👁️
                       </button>
-                      <button
-                        onClick={() => handleDownloadPdf(devisItem.number)}
+                      {/* Télécharger PDF (décommente si tu veux le bouton download à part) */}
+                      {/* <button
+                        onClick={() => handleShowOrDownloadPdf(devisItem.id, devisItem.number)}
                         title="Télécharger le devis PDF"
                         style={{
                           background: "none",
@@ -576,8 +547,8 @@ export default function DevisPage() {
                           fontSize: "1.2em"
                         }}
                       >
-                        ⬇️
-                      </button>
+                        📄
+                      </button> */}
                       <button
                         title="Supprimer"
                         style={{

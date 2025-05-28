@@ -34,7 +34,7 @@ const STATUTS: { value: InvoiceStatus, label: string }[] = [
   { value: 'ANNULE', label: 'Annulée' }
 ]
 
-// Télécharge et affiche le PDF dans un nouvel onglet
+// Télécharge et affiche le PDF dans un nouvel onglet avec toast
 const handleShowOrDownloadPdf = async (id: string, number: string, type: 'facture' | 'devis' = 'facture') => {
   const token = localStorage.getItem("token")
   if (!token) {
@@ -53,7 +53,8 @@ const handleShowOrDownloadPdf = async (id: string, number: string, type: 'factur
     const pdfUrl = window.URL.createObjectURL(blob)
     // Ouvre le PDF dans un nouvel onglet
     window.open(pdfUrl, '_blank')
-    // Si tu veux proposer le download auto : (décommente la ligne suivante)
+    toast.success("PDF généré et affiché !")
+    // Pour le download auto (décommente au besoin) :
     // const link = document.createElement('a')
     // link.href = pdfUrl
     // link.download = `${type === 'devis' ? 'Devis' : 'Facture'}-${number}.pdf`
@@ -115,7 +116,7 @@ function useEffectToastOnRedirect(showPdf: (id: string, number: string) => void)
                   padding: 0,
                   font: "inherit",
                 }}
-                onClick={() => window.open(`/api/invoices/${id}/pdf`, "_blank")}
+                onClick={() => handleShowOrDownloadPdf(id, number, 'facture')}
               >
                 Afficher
               </button>
@@ -523,7 +524,7 @@ export default function FacturesPage() {
                     <div className={styles.actions}>
                       {/* Afficher PDF (icone oeil) */}
                       <button
-                        onClick={() => window.open(`/api/invoices/${facture.id}/pdf`, "_blank")}
+                        onClick={() => handleShowOrDownloadPdf(facture.id, facture.number, 'facture')}
                         title="Afficher la facture PDF"
                         style={{
                           background: "none",
@@ -535,7 +536,8 @@ export default function FacturesPage() {
                         👁️
                       </button>
                       {/* Télécharger PDF */}
-                      <button
+                      {/* Décommente ci-dessous si tu veux un bouton spécifique download, sinon 👁️ suffit */}
+                      {/* <button
                         onClick={() => handleShowOrDownloadPdf(facture.id, facture.number, 'facture')}
                         title="Télécharger la facture PDF"
                         style={{
@@ -546,7 +548,7 @@ export default function FacturesPage() {
                         }}
                       >
                         📄
-                      </button>
+                      </button> */}
                       {/* Supprimer */}
                       <button
                         title="Supprimer"
