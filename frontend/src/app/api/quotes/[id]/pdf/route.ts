@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import prisma from '@/lib/prisma'
 import path from 'path'
+import fs from 'fs'
 
 type QuoteItem = {
   description: string
@@ -19,7 +20,6 @@ export async function GET(
 ) {
   const { id } = context.params
 
-  // Récupération du devis + lignes + client éventuel + user et companyInfo
   const quote = await prisma.quote.findUnique({
     where: { id },
     include: {
@@ -33,10 +33,15 @@ export async function GET(
     return NextResponse.json({ error: "Devis introuvable" }, { status: 404 })
   }
 
-  // --- Chargement police Roboto ---
+  // Police Roboto
   const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
+  if (!fs.existsSync(fontPath)) {
+    return NextResponse.json({ error: "Police non trouvée" }, { status: 500 })
+  }
   const doc = new PDFDocument({ margin: 40 })
   doc.registerFont('Roboto', fontPath)
+
+  // Toujours utiliser Roboto
   doc.font('Roboto')
 
   const chunks: Buffer[] = []
@@ -44,18 +49,15 @@ export async function GET(
   doc.on('end', () => {})
 
   // === HEADER ===
-  doc.fontSize(22).text(`Devis n°${quote.number}`, { align: 'center' })
+  doc.font('Roboto').fontSize(22).text(`Devis n°${quote.number}`, { align: 'center' })
   doc.moveDown(0.5)
-  doc.fontSize(12)
-  doc.text(`Émis le : ${new Date(quote.issuedAt).toLocaleDateString("fr-FR")}`)
-  if (quote.validUntil) {
-    doc.text(`Valable jusqu'au : ${new Date(quote.validUntil).toLocaleDateString("fr-FR")}`)
-  }
+  doc.font('Roboto').fontSize(12)
+  doc.text(`Émise le : ${new Date(quote.issuedAt).toLocaleDateString("fr-FR")}`)
   doc.text(`Statut : ${quote.statut}`)
   doc.moveDown(0.5)
 
   // === CLIENT & ÉMETTEUR ===
-  doc.fontSize(11)
+  doc.font('Roboto').fontSize(11)
   doc.text('Émetteur :', { underline: true })
   doc.text(quote.user?.companyInfo?.name || 'Votre société')
   doc.text(quote.user?.companyInfo?.address || '')
@@ -76,7 +78,7 @@ export async function GET(
   doc.moveDown(1)
 
   // === TABLEAU LIGNES ===
-  doc.fontSize(11)
+  doc.font('Roboto').fontSize(11)
   doc.text('Désignation', 40, doc.y, { width: 180, continued: true })
   doc.text('Qté', 230, doc.y, { width: 30, align: 'right', continued: true })
   doc.text('PU HT', 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -85,10 +87,10 @@ export async function GET(
   doc.text('Total TTC', 435, doc.y, { width: 70, align: 'right' })
   doc.moveDown(0.3)
 
-  // TVA Map pour total par taux
   const tvaMap: Record<string, number> = {}
 
   for (const item of quote.items as QuoteItem[]) {
+    doc.font('Roboto')
     doc.text(item.description, 40, doc.y, { width: 180, continued: true })
     doc.text(item.quantity.toString(), 230, doc.y, { width: 30, align: 'right', continued: true })
     doc.text(item.unitPrice.toFixed(2), 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -102,32 +104,35 @@ export async function GET(
 
   doc.moveDown(1)
 
-  // === TOTAUX ===
+  doc.font('Roboto')
   doc.text('Total HT', 340, doc.y, { continued: true })
   doc.text(quote.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
   Object.entries(tvaMap).forEach(([taux, montant]) => {
+    doc.font('Roboto')
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
     doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
     doc.moveDown(0.2)
   })
 
+  doc.font('Roboto')
   doc.text('Total TVA', 340, doc.y, { continued: true })
   doc.text(quote.totalTVA.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
   doc.text('Total TTC', 340, doc.y, { continued: true })
   doc.text(quote.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
 
-  // === NOTES / CONDITIONS ===
-  if (quote.notes) {
-    doc.moveDown(1)
-    doc.fontSize(10).text('Conditions/Notes :', { underline: true })
-    doc.fontSize(10).text(quote.notes)
-  }
-
   doc.moveDown(1.5)
-  doc.fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+  doc.font('Roboto').fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+
+  if (quote.paymentInfo || quote.iban) {
+    doc.moveDown(1)
+    doc.font('Roboto').fontSize(11).text('Informations de paiement :', { underline: true })
+    if (quote.paymentInfo) doc.text(quote.paymentInfo)
+    if (quote.iban) doc.text(`IBAN : ${quote.iban}`)
+    if (quote.bic) doc.text(`BIC : ${quote.bic}`)
+  }
 
   doc.end()
   await new Promise(resolve => doc.on('end', resolve))
