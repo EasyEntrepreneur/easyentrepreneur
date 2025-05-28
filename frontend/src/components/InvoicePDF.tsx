@@ -212,14 +212,12 @@ type InvoicePDFProps = {
   totalTVA: number | string;
   totalTTC: number | string;
   paymentInfo?: string | null;
-  iban?: string | null;
-  bic?: string | null;
+  legalNote?: string | null;
 };
 
 export const InvoicePDF = ({
   invoiceTitle,
   issuedAt,
-  statut,
   issuer,
   client,
   items,
@@ -227,8 +225,7 @@ export const InvoicePDF = ({
   totalTVA,
   totalTTC,
   paymentInfo,
-  iban,
-  bic
+  legalNote // <-- AJOUT !
 }: InvoicePDFProps) => {
   return (
     <Document>
@@ -285,7 +282,7 @@ export const InvoicePDF = ({
           <View style={[styles.tableRow, styles.tableHeader]}>
             <Text style={styles.cellDesc}>Description</Text>
             <Text style={styles.cellQty}>Quantité</Text>
-            <Text style={styles.cellPrice}>Prix unitaire HT</Text>
+            <Text style={styles.cellPrice}>Prix uni HT</Text>
             <Text style={styles.cellTotalHT}>Prix total HT</Text>
             <Text style={styles.cellTva}>TVA (%)</Text>
             <Text style={styles.cellTotalTTC}>Prix total TTC</Text>
@@ -327,6 +324,10 @@ export const InvoicePDF = ({
             </View>
           </View>
         </View>
+        {/* MENTION LÉGALE EN BAS */}
+        {legalNote && (
+          <Text style={styles.note}>{legalNote}</Text>
+        )}
       </Page>
     </Document>
   );
