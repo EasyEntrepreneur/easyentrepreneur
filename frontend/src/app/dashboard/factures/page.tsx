@@ -115,7 +115,7 @@ function useEffectToastOnRedirect(showPdf: (id: string, number: string) => void)
                   padding: 0,
                   font: "inherit",
                 }}
-                onClick={() => showPdf(id, number)}
+                onClick={() => window.open(`/api/invoices/${id}/pdf`, "_blank")}
               >
                 Afficher
               </button>
@@ -523,14 +523,13 @@ export default function FacturesPage() {
                     <div className={styles.actions}>
                       {/* Afficher PDF (icone oeil) */}
                       <button
-                        onClick={() => handleShowPdf(facture.id, facture.number)}
+                        onClick={() => window.open(`/api/invoices/${facture.id}/pdf`, "_blank")}
                         title="Afficher la facture PDF"
                         style={{
                           background: "none",
                           border: "none",
                           cursor: "pointer",
-                          fontSize: "1.2em",
-                          marginRight: 6
+                          fontSize: "1.2em"
                         }}
                       >
                         👁️
