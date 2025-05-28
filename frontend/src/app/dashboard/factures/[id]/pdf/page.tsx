@@ -30,7 +30,7 @@ export default function FacturePDFPage() {
   return (
     <PDFViewer width="100%" height="1000px" style={{ minHeight: 800 }}>
       <InvoicePDF
-        invoiceNumber={invoice.number}
+        invoiceTitle={''}
         issuedAt={invoice.issuedAt}
         statut={invoice.statut}
         issuer={{
@@ -58,7 +58,7 @@ export default function FacturePDFPage() {
         paymentInfo={invoice.paymentInfo}
         iban={invoice.iban}
         bic={invoice.bic}
-      />
+        />
     </PDFViewer>
   )
 }
