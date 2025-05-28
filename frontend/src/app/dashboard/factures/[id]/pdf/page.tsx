@@ -56,6 +56,7 @@ export default function FacturePDFPage() {
         totalTVA={invoice.totalTVA}
         totalTTC={invoice.totalTTC}
         paymentInfo={invoice.paymentInfo}
+        legalNote={invoice.legalNote}
         />
     </PDFViewer>
   )
