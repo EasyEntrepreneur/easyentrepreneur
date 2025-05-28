@@ -48,7 +48,6 @@ export default function FacturePDFPage() {
           city: invoice.clientCity,
           siret: invoice.clientSiret,
           vat: invoice.clientVat,
-          email: invoice.clientEmail,
           phone: invoice.clientPhone,
         }}
         items={invoice.items}

@@ -230,6 +230,7 @@ model Client {
   siret     String
   vat       String?
   phone     String?
+  email     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
