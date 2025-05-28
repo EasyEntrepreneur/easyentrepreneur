@@ -69,13 +69,15 @@ const styles = StyleSheet.create({
   dateRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderColor: "#dbeafe"
+
   },
   dateLabel: {
     backgroundColor: "#e5eafe",
     color: "#202060",
     padding: 6,
-    borderRadius: 5,
     minWidth: 108,
     textAlign: "center",
     fontWeight: "bold",
@@ -100,6 +102,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#dbeafe"
   },
   tableHeader: {
+    textAlign: "center",
     backgroundColor: "#e5eafe",
     fontWeight: "bold"
   },
