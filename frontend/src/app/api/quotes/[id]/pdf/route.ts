@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import prisma from '@/lib/prisma'
 
-// Types Prisma (simples) pour typer les items dans la boucle
+// Types pour la boucle (pas obligatoire mais conseillé)
 type QuoteItem = {
   description: string
   quantity: number
@@ -13,15 +13,9 @@ type QuoteItem = {
   totalTTC: number
 }
 
-type Params = {
-  params: {
-    id: string
-  }
-}
-
 export async function GET(
   req: NextRequest,
-  { params }: Params
+  { params }: { params: { id: string } }
 ) {
   const { id } = params
 
