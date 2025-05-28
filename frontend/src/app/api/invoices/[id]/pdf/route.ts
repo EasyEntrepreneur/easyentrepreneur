@@ -4,8 +4,8 @@ import prisma from '@/lib/prisma'
 import path from 'path'
 import fs from 'fs'
 
-// Chemin absolu police Roboto
-const fontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
+// Chemin police Roboto
+const robotoFontPath = path.join(process.cwd(), 'src', 'fonts', 'Roboto', 'Roboto-VariableFont_wdth,wght.ttf')
 
 type InvoiceItem = {
   description: string
@@ -23,7 +23,6 @@ export async function GET(
 ) {
   const { id } = context.params
 
-  // Récupération de la facture complète
   const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
@@ -37,16 +36,14 @@ export async function GET(
     return NextResponse.json({ error: "Facture introuvable" }, { status: 404 })
   }
 
-  // Vérifier police Roboto
-  if (!fs.existsSync(fontPath)) {
+  if (!fs.existsSync(robotoFontPath)) {
     return NextResponse.json({ error: "Police Roboto non trouvée" }, { status: 500 })
   }
 
+  // On utilise UNIQUEMENT Roboto partout (jamais Helvetica !)
   const doc = new PDFDocument({ margin: 40 })
-  // Hack Vercel: on écrase Helvetica par Roboto pour tout le document
-  doc.registerFont('Roboto', fontPath)
-  doc.registerFont('Helvetica', fontPath) // ← hack anti-Helvetica
-  doc.font('Roboto')
+  doc.registerFont('Roboto', robotoFontPath)
+  doc.font('Roboto') // ← met la police AVANT tout
 
   const chunks: Buffer[] = []
   doc.on('data', chunk => chunks.push(chunk))
