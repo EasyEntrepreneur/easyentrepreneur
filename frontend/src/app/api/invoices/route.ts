@@ -2,23 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { authenticateTokenApiRoute } from '@/lib/middlewares/authenticateTokenApiRoute'
 
+// Utilitaire pour vérifier l'objet auth
 function isUser(obj: any): obj is { userId: string } {
   return obj && typeof obj.userId === "string";
 }
 
 export async function GET(req: NextRequest) {
   const auth = await authenticateTokenApiRoute(req)
-  if (!isUser(auth)) return auth;
+  if (!isUser(auth)) return auth; // Si erreur auth, return la réponse JSON
   const userId = auth.userId;
 
-  // Récupère aussi les infos société (émetteur) via la relation utilisateur
+  // Liste des factures de l'utilisateur
   const invoices = await prisma.invoice.findMany({
     where: { userId },
-    include: {
-      items: true,
-      client: true,
-      user: { include: { companyInfo: true } },
-    },
+    include: { items: true, client: true },
     orderBy: { issuedAt: 'desc' }
   })
   return NextResponse.json(invoices)
@@ -26,19 +23,19 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const auth = await authenticateTokenApiRoute(req)
-  if (!isUser(auth)) return auth;
+  if (!isUser(auth)) return auth; // Si erreur auth, return la réponse JSON
   const userId = auth.userId;
 
   const body = await req.json()
   const {
-    issuer, // = companyInfo
+    issuer,
     client,
     dueAt,
     items,
     invoiceHtml,
     invoiceTitle,
     paymentInfo,
-    legalNote,
+    legalNote, // <-- utilisé pour la génération PDF côté client
     ...rest
   } = body
 
@@ -102,7 +99,7 @@ export async function POST(req: NextRequest) {
     }
   })
 
-  // === GESTION CLIENT (création si non existant) ===
+  // Gestion du client (création si non existant)
   let dbClient = null
   if (client.siret) {
     dbClient = await prisma.client.findFirst({ where: { userId, siret: client.siret } })
@@ -132,38 +129,7 @@ export async function POST(req: NextRequest) {
     dbClient = await prisma.client.create({ data: clientToInsert })
   }
 
-  // === GESTION COMPANYINFO (EMETTEUR - MAJ ou CREATE si non existant) ===
-  // On update la fiche CompanyInfo de l'utilisateur connecté (unique par userId)
-  let dbCompanyInfo = await prisma.companyInfo.findUnique({ where: { userId } });
-  if (!dbCompanyInfo) {
-    dbCompanyInfo = await prisma.companyInfo.create({
-      data: {
-        userId,
-        name: issuer.name,
-        address: issuer.address,
-        zip: issuer.zip,
-        city: issuer.city,
-        siret: issuer.siret || "",
-        vat: issuer.vat || "",
-        phone: issuer.phone || "",
-      }
-    })
-  } else {
-    dbCompanyInfo = await prisma.companyInfo.update({
-      where: { userId },
-      data: {
-        name: issuer.name,
-        address: issuer.address,
-        zip: issuer.zip,
-        city: issuer.city,
-        siret: issuer.siret || "",
-        vat: issuer.vat || "",
-        phone: issuer.phone || "",
-      }
-    })
-  }
-
-  // Création de la facture
+  // Création de la facture (stocke l'HTML, pas de PDF)
   const newInvoice = await prisma.invoice.create({
     data: {
       number,
@@ -186,11 +152,7 @@ export async function POST(req: NextRequest) {
       paymentInfo,
       legalNote,
     },
-    include: {
-      items: true,
-      client: true,
-      user: { include: { companyInfo: true } },
-    },
+    include: { items: true, client: true },
   })
 
   return NextResponse.json({ ...newInvoice })
