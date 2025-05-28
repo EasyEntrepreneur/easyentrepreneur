@@ -14,7 +14,7 @@ type InvoiceItem = {
 
 export async function GET(
   req: NextRequest,
-  context: any // <- tu peux même laisser "any" ici, Next.js s’en fiche, ou ne rien mettre (ça marchera aussi)
+  context: any
 ) {
   const { id } = context.params
 

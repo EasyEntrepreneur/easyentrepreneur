@@ -14,11 +14,11 @@ type QuoteItem = {
 
 export async function GET(
   req: NextRequest,
-  context: any // ou simplement context (pas typé)
+  context: any
 ) {
   const { id } = context.params
 
-  // Récupération du devis + lignes + client + user et companyInfo
+  // Récupération de la Devis + lignes + client éventuel + user et companyInfo
   const quote = await prisma.quote.findUnique({
     where: { id },
     include: {
@@ -46,10 +46,7 @@ export async function GET(
   doc.fontSize(22).text(`Devis n°${quote.number}`, { align: 'center' })
   doc.moveDown(0.5)
   doc.fontSize(12)
-  doc.text(`Émis le : ${new Date(quote.issuedAt).toLocaleDateString("fr-FR")}`)
-  if (quote.validUntil) {
-    doc.text(`Valable jusqu'au : ${new Date(quote.validUntil).toLocaleDateString("fr-FR")}`)
-  }
+  doc.text(`Émise le : ${new Date(quote.issuedAt).toLocaleDateString("fr-FR")}`)
   doc.text(`Statut : ${quote.statut}`)
   doc.moveDown(0.5)
 
@@ -120,15 +117,17 @@ export async function GET(
   doc.text('Total TTC', 340, doc.y, { continued: true })
   doc.text(quote.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
 
-  // === NOTES / CONDITIONS ===
-  if (quote.notes) {
-    doc.moveDown(1)
-    doc.fontSize(10).text('Conditions/Notes :', { underline: true })
-    doc.fontSize(10).text(quote.notes)
-  }
-
   doc.moveDown(1.5)
   doc.fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+
+  // === INFOS DE PAIEMENT (optionnel) ===
+  if (quote.paymentInfo || quote.iban) {
+    doc.moveDown(1)
+    doc.fontSize(11).text('Informations de paiement :', { underline: true })
+    if (quote.paymentInfo) doc.text(quote.paymentInfo)
+    if (quote.iban) doc.text(`IBAN : ${quote.iban}`)
+    if (quote.bic) doc.text(`BIC : ${quote.bic}`)
+  }
 
   doc.end()
   await new Promise(resolve => doc.on('end', resolve))
