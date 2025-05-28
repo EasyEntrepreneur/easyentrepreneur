@@ -202,11 +202,72 @@ export default function InvoiceForm({
   // ==== AJOUT POUR GÉNÉRATION HTML PDF ====
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // --- LOGIQUE POUR GÉRER LA SAUVEGARDE COMPANYINFO (ÉMETTEUR) EN BDD ---
+  const saveOrUpdateCompanyInfo = async (issuerData: any) => {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      // Récupère la fiche existante (GET)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/issuer`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 404) {
+        // Crée la fiche si n’existe pas (POST)
+        const createRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/issuer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(issuerData),
+        });
+        if (createRes.ok) return true;
+        else throw new Error("Erreur lors de la création de l’émetteur.");
+      }
+      if (res.ok) {
+        // Met à jour la fiche (POST) si elle existe déjà
+        const updateRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/issuer`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(issuerData),
+        });
+        if (updateRes.ok) return true;
+        else throw new Error("Erreur lors de la mise à jour de l’émetteur.");
+      }
+    } catch (e) {
+      toast.error("Impossible de sauvegarder les infos société.");
+      return false;
+    }
+  };
+
   // --- SOUMISSION DU FORMULAIRE ---
   const [loading, setLoading] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Données de l’émetteur à sauvegarder côté BDD (companyInfo)
+    const issuerData = {
+      name: issuer.name,
+      address: issuer.address,
+      zip: issuer.zip,
+      city: issuer.city,
+      siret: issuer.siret,
+      vat: issuerTva,
+      phone: issuerPhone,
+    };
+
+    // Ajoute cette étape AVANT la création de la facture
+    const saved = await saveOrUpdateCompanyInfo(issuerData);
+    if (!saved) {
+      setLoading(false);
+      toast.error("Impossible d’enregistrer les infos société.");
+      return;
+    }
 
     const clientPayload = {
       name: client.name,
@@ -263,8 +324,8 @@ export default function InvoiceForm({
       totalHT,
       totalVAT,
       totalTTC,
-      invoiceHtml,  // ← ENVOI DU HTML DANS LE BODY
-      invoiceTitle, 
+      invoiceHtml,
+      invoiceTitle,
     };
 
     try {
