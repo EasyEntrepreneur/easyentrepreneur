@@ -195,6 +195,7 @@ type InvoicePDFProps = {
   issuedAt: string | Date;
   statut: string;
   issuer: CompanyInfo;
+  legalNote?: string | null;
   client: {
     name: string;
     address: string;
@@ -210,7 +211,6 @@ type InvoicePDFProps = {
   totalTVA: number | string;
   totalTTC: number | string;
   paymentInfo?: string | null;
-  legalNote?: string | null;
 };
 
 export const InvoicePDF = ({
