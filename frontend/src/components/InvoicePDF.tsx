@@ -7,9 +7,16 @@ import {
   StyleSheet
 } from "@react-pdf/renderer";
 
-// UTIL
-const euro = (v: number) =>
-  typeof v === "number" ? v.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €" : "";
+// Affichage montant robuste (gère string "13123.5" ou nombre, et évite les '/')
+const formatEuro = (v: number|string) => {
+  if (typeof v === "string") {
+    v = v.replace(/[^\d.,-]/g, "").replace(",", ".");
+    v = v.replace(/(\d)\.(\d{3})/, "$1$2"); // supprime les points de milliers
+  }
+  const n = Number(v);
+  if (isNaN(n)) return typeof v === "string" ? v + " €" : "0,00 €";
+  return n.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
+};
 
 const styles = StyleSheet.create({
   page: {
@@ -18,22 +25,46 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 32
   },
-  // HEADER & TITRE
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
   invoiceTitle: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "bold",
     textAlign: "right",
-    marginBottom: 6,
-    marginTop: 0
+    marginBottom: 2,
+    color: "#151c2b"
   },
   headerBlock: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12
+    marginBottom: 0,
+    width: "100%"
   },
   emitterBlock: {
-    width: "46%",
+    width: "48%",
     fontWeight: "bold"
+  },
+  clientBlockWrap: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    width: "100%",
+    marginTop: 0
+  },
+  clientBlock: {
+    width: "48%",
+    textAlign: "right",
+    fontWeight: "bold",
+    marginTop: 8,
+    marginBottom: 24 // Pour donner l'espace demandé
+  },
+  siret: {
+    fontWeight: "normal",
+    fontSize: 10,
+    marginTop: 2
   },
   // Date
   dateRow: {
@@ -56,29 +87,7 @@ const styles = StyleSheet.create({
     fontWeight: 500,
     color: "#222"
   },
-  // CLIENT INFO align right, sous émetteur
-  clientBlockWrap: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    width: "100%"
-  },
-  clientBlock: {
-    width: "48%",
-    textAlign: "right",
-    fontWeight: "bold",
-    marginTop: 8 // démarre sous l'émetteur
-  },
-  clientSiret: {
-    fontWeight: "normal",
-    fontSize: 10,
-    marginTop: 2
-  },
-  siret: {
-    fontWeight: "normal",
-    fontSize: 10,
-    marginTop: 2
-  },
-  // TABLEAU
+  // Table
   table: {
     width: "100%",
     marginTop: 10,
@@ -87,21 +96,38 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 28,
     borderBottomWidth: 1,
-    borderBottomColor: "#dbeafe",
-    minHeight: 28
+    borderBottomColor: "#dbeafe"
   },
   tableHeader: {
     backgroundColor: "#e5eafe",
     fontWeight: "bold"
   },
-  cellDesc: { flex: 3, padding: 6, borderRightWidth: 1, borderRightColor: "#dbeafe" },
-  cellQty: { flex: 1, padding: 6, textAlign: "center", borderRightWidth: 1, borderRightColor: "#dbeafe" },
-  cellPrice: { flex: 1.5, padding: 6, textAlign: "right", borderRightWidth: 1, borderRightColor: "#dbeafe" },
-  cellTotalHT: { flex: 1.7, padding: 6, textAlign: "right", borderRightWidth: 1, borderRightColor: "#dbeafe" },
-  cellTva: { flex: 1.2, padding: 6, textAlign: "right", borderRightWidth: 1, borderRightColor: "#dbeafe" },
-  cellTotalTTC: { flex: 1.7, padding: 6, textAlign: "right" },
-  // TOTALS TABLE
+  cellDesc: {
+    flex: 3, padding: 6,
+    borderRightWidth: 1, borderRightColor: "#dbeafe"
+  },
+  cellQty: {
+    flex: 1, padding: 6, textAlign: "center",
+    borderRightWidth: 1, borderRightColor: "#dbeafe"
+  },
+  cellPrice: {
+    flex: 1.5, padding: 6, textAlign: "right",
+    borderRightWidth: 1, borderRightColor: "#dbeafe"
+  },
+  cellTotalHT: {
+    flex: 1.7, padding: 6, textAlign: "right",
+    borderRightWidth: 1, borderRightColor: "#dbeafe"
+  },
+  cellTva: {
+    flex: 1.2, padding: 6, textAlign: "right",
+    borderRightWidth: 1, borderRightColor: "#dbeafe"
+  },
+  cellTotalTTC: {
+    flex: 1.7, padding: 6, textAlign: "right"
+  },
+  // Totaux
   totalsBox: {
     alignSelf: "flex-end",
     width: "50%",
@@ -113,13 +139,10 @@ const styles = StyleSheet.create({
   },
   totalsTable: {
     width: "100%",
-    borderCollapse: "collapse"
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    fontSize: 12,
-    fontWeight: "bold",
     borderBottomWidth: 1,
     borderBottomColor: "#c7d6fa",
     paddingVertical: 7,
@@ -128,8 +151,6 @@ const styles = StyleSheet.create({
   totalsRowLast: {
     flexDirection: "row",
     justifyContent: "space-between",
-    fontSize: 12,
-    fontWeight: "bold",
     paddingVertical: 7,
     paddingHorizontal: 12
   },
@@ -142,13 +163,11 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontWeight: "bold"
   },
-  // PAIEMENT INFOS
   paiementBlock: {
     marginTop: 22,
     fontSize: 11,
     width: "80%"
   },
-  // LEGAL NOTE
   note: {
     marginTop: 18,
     textAlign: "center",
@@ -161,11 +180,11 @@ const styles = StyleSheet.create({
 type InvoiceItem = {
   description: string;
   quantity: number;
-  unitPrice: number;
+  unitPrice: number | string;
   vatRate: number;
-  totalHT: number;
-  totalTVA: number;
-  totalTTC: number;
+  totalHT: number | string;
+  totalTVA: number | string;
+  totalTTC: number | string;
 };
 type CompanyInfo = {
   name?: string;
@@ -176,7 +195,7 @@ type CompanyInfo = {
   vat?: string;
 };
 type InvoicePDFProps = {
-  invoiceTitle: string; // <- Ajouté pour coller à InvoiceForm.tsx
+  invoiceTitle: string;
   issuedAt: string | Date;
   statut: string;
   issuer: CompanyInfo;
@@ -191,9 +210,9 @@ type InvoicePDFProps = {
     siret?: string;
   };
   items: InvoiceItem[];
-  totalHT: number;
-  totalTVA: number;
-  totalTTC: number;
+  totalHT: number | string;
+  totalTVA: number | string;
+  totalTTC: number | string;
   paymentInfo?: string | null;
   iban?: string | null;
   bic?: string | null;
@@ -202,6 +221,7 @@ type InvoicePDFProps = {
 export const InvoicePDF = ({
   invoiceTitle,
   issuedAt,
+  statut,
   issuer,
   client,
   items,
@@ -216,13 +236,13 @@ export const InvoicePDF = ({
     <Document>
       <Page size="A4" style={styles.page}>
         {/* TITRE EN HAUT DROITE */}
-        <Text style={styles.invoiceTitle}>
-          {invoiceTitle}
-        </Text>
-
-        {/* HEADER INFOS */}
+        <View style={styles.titleRow}>
+          <Text style={styles.invoiceTitle}>
+            {invoiceTitle}
+          </Text>
+        </View>
+        {/* INFOS EMETTEUR */}
         <View style={styles.headerBlock}>
-          {/* Emetteur à gauche */}
           <View style={styles.emitterBlock}>
             <Text>{issuer.name}</Text>
             <Text>{issuer.address}</Text>
@@ -237,7 +257,6 @@ export const InvoicePDF = ({
             )}
           </View>
         </View>
-
         {/* INFOS CLIENT EN DESSOUS À DROITE */}
         <View style={styles.clientBlockWrap}>
           <View style={styles.clientBlock}>
@@ -247,14 +266,13 @@ export const InvoicePDF = ({
               {[client.zip, client.city].filter(Boolean).join(" ")}
             </Text>
             {client.siret && (
-              <Text style={styles.clientSiret}>SIRET : {client.siret}</Text>
+              <Text style={styles.siret}>SIRET : {client.siret}</Text>
             )}
             {client.vat && (
-              <Text style={styles.clientSiret}>TVA : {client.vat}</Text>
+              <Text style={styles.siret}>TVA : {client.vat}</Text>
             )}
           </View>
         </View>
-
         {/* DATE */}
         <View style={styles.dateRow}>
           <Text style={styles.dateLabel}>Date de facture</Text>
@@ -264,7 +282,6 @@ export const InvoicePDF = ({
               : issuedAt.toLocaleDateString("fr-FR")}
           </Text>
         </View>
-
         {/* TABLEAU DES LIGNES */}
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
@@ -279,32 +296,30 @@ export const InvoicePDF = ({
             <View style={styles.tableRow} key={i}>
               <Text style={styles.cellDesc}>{item.description}</Text>
               <Text style={styles.cellQty}>{item.quantity}</Text>
-              <Text style={styles.cellPrice}>{euro(item.unitPrice)}</Text>
-              <Text style={styles.cellTotalHT}>{euro(item.totalHT)}</Text>
+              <Text style={styles.cellPrice}>{formatEuro(item.unitPrice)}</Text>
+              <Text style={styles.cellTotalHT}>{formatEuro(item.totalHT)}</Text>
               <Text style={styles.cellTva}>{(item.vatRate || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}</Text>
-              <Text style={styles.cellTotalTTC}>{euro(item.totalTTC)}</Text>
+              <Text style={styles.cellTotalTTC}>{formatEuro(item.totalTTC)}</Text>
             </View>
           ))}
         </View>
-
         {/* TOTAUX - TABLEAU à droite */}
         <View style={styles.totalsBox}>
           <View style={styles.totalsTable}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Total HT</Text>
-              <Text style={styles.totalsValue}>{euro(totalHT)}</Text>
+              <Text style={styles.totalsValue}>{formatEuro(totalHT)}</Text>
             </View>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Total TVA :</Text>
-              <Text style={styles.totalsValue}>{euro(totalTVA)}</Text>
+              <Text style={styles.totalsValue}>{formatEuro(totalTVA)}</Text>
             </View>
             <View style={styles.totalsRowLast}>
               <Text style={styles.totalsLabel}>Total TTC</Text>
-              <Text style={styles.totalsValue}>{euro(totalTTC)}</Text>
+              <Text style={styles.totalsValue}>{formatEuro(totalTTC)}</Text>
             </View>
           </View>
         </View>
-
         {/* INFOS DE PAIEMENT */}
         {(paymentInfo || iban || bic) && (
           <View style={styles.paiementBlock}>
@@ -314,7 +329,6 @@ export const InvoicePDF = ({
             {bic && <Text>BIC : {bic}</Text>}
           </View>
         )}
-
         {/* LEGAL */}
         <Text style={styles.note}>
           TVA non applicable, art. 293B du CGI.
