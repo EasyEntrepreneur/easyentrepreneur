@@ -202,7 +202,20 @@ export const InvoicePDF = ({
     const taux = (item.vatRate || 0).toFixed(2);
     tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA;
   });
-
+  console.log({
+  invoiceNumber,
+  issuedAt,
+  statut,
+  issuer,
+  client,
+  items,
+  totalHT,
+  totalTVA,
+  totalTTC,
+  paymentInfo,
+  iban,
+  bic
+});
   return (
     <Document>
       <Page size="A4" style={styles.page}>

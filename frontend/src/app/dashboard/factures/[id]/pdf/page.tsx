@@ -26,6 +26,7 @@ export default function FacturePDFPage() {
   if (!invoice) return <div>Facture introuvable</div>
 
   // Adapte la structure passée à InvoicePDF ici !
+  console.log("invoice for pdf = ", invoice)
   return (
     <PDFViewer width="100%" height="1000px" style={{ minHeight: 800 }}>
       <InvoicePDF
