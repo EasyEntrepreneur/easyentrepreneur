@@ -81,7 +81,6 @@ const styles = StyleSheet.create({
   // TABLEAU
   table: {
     width: "100%",
-    borderWidth: 0,
     marginTop: 10,
     marginBottom: 12
   },
@@ -203,7 +202,6 @@ type InvoicePDFProps = {
 export const InvoicePDF = ({
   invoiceTitle,
   issuedAt,
-  statut,
   issuer,
   client,
   items,
