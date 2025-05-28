@@ -143,7 +143,7 @@ model Invoice {
   bic  String?
   invoiceHtml     String?
 
-  pdfPath String? // Chemin du PDF stocké (optionnel)
+  pdfUrl String? // Chemin du PDF stocké (optionnel)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -194,7 +194,7 @@ model Quote {
   quoteHtml     String?
 
   notes         String?     // Remarques / conditions particulières
-  pdfPath       String?     // Chemin du PDF stocké (optionnel)
+  pdfUrl       String?     // Chemin du PDF stocké (optionnel)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }

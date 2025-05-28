@@ -1,28 +1,36 @@
 import { NextRequest } from "next/server";
 import puppeteer from "puppeteer";
 import prisma from "@/lib/prisma";
+import { supabase } from "@/lib/supabaseAdmin";
+import { v4 as uuidv4 } from "uuid";
 
-export async function GET(req: NextRequest) {
-  // Récupération de l'id depuis l'URL (format: /api/quotes/xxxx/pdf)
-  const url = new URL(req.url);
-  const segments = url.pathname.split("/");
-  const quoteId = segments[segments.length - 2]; // /api/quotes/[id]/pdf
+export const dynamic = "force-dynamic";
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const quoteId = params.id;
   if (!quoteId) {
     return new Response("ID manquant", { status: 400 });
   }
 
-  // Récupérer le devis depuis Prisma
+  // Cherche le devis
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
     include: { items: true, client: true },
   });
-
   if (!quote) {
     return new Response("Devis introuvable", { status: 404 });
   }
 
-  // Générer le HTML pour le devis (à personnaliser avec ton vrai template !)
+  // Vérifie si le PDF existe déjà (champ `pdfUrl`)
+  if (quote.pdfUrl) {
+    // Redirection directe
+    return Response.redirect(quote.pdfUrl, 302);
+  }
+
+  // Génère le HTML (personnalise ici aussi)
   const html = `
     <html>
       <head>
@@ -45,6 +53,7 @@ export async function GET(req: NextRequest) {
     </html>
   `;
 
+  // Génère le PDF
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
@@ -53,11 +62,28 @@ export async function GET(req: NextRequest) {
   const pdfBuffer = await page.pdf({ format: "A4" });
   await browser.close();
 
-  return new Response(pdfBuffer, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="Devis-${quote.number}.pdf"`,
-    },
+  // Upload du PDF sur Supabase Storage
+  const filename = `devis/${quote.number}-${uuidv4()}.pdf`;
+  const { data, error } = await supabase.storage
+    .from("quotes")
+    .upload(filename, pdfBuffer, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
+
+  if (error) {
+    return new Response("Erreur upload Supabase: " + error.message, { status: 500 });
+  }
+
+  // Génère l’URL publique
+  const pdfUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/quotes/${filename}`;
+
+  // Mets à jour le devis avec l’URL du PDF
+  await prisma.quote.update({
+    where: { id: quoteId },
+    data: { pdfUrl },
   });
+
+  // Redirige vers le PDF hébergé
+  return Response.redirect(pdfUrl, 302);
 }
