@@ -72,7 +72,7 @@ export async function GET(
   doc.moveDown(1)
 
   // === TABLEAU LIGNES ===
-  doc.fontSize(11).font('Helvetica-Bold')
+  doc.fontSize(11)
   doc.text('Désignation', 40, doc.y, { width: 180, continued: true })
   doc.text('Qté', 230, doc.y, { width: 30, align: 'right', continued: true })
   doc.text('PU HT', 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -80,7 +80,6 @@ export async function GET(
   doc.text('Total HT', 370, doc.y, { width: 60, align: 'right', continued: true })
   doc.text('Total TTC', 435, doc.y, { width: 70, align: 'right' })
   doc.moveDown(0.3)
-  doc.font('Helvetica')
 
   // TVA Map pour total par taux
   const tvaMap: Record<string, number> = {}
@@ -101,20 +100,17 @@ export async function GET(
   doc.moveDown(1)
 
   // === TOTAUX ===
-  doc.font('Helvetica-Bold')
   doc.text('Total HT', 340, doc.y, { continued: true })
   doc.text(invoice.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
   // Affichage TVA(s) par taux
-  doc.font('Helvetica')
   Object.entries(tvaMap).forEach(([taux, montant]) => {
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
     doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
     doc.moveDown(0.2)
   })
 
-  doc.font('Helvetica-Bold')
   doc.text('Total TVA', 340, doc.y, { continued: true })
   doc.text(invoice.totalTVA.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
@@ -122,7 +118,7 @@ export async function GET(
   doc.text(invoice.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
 
   doc.moveDown(1.5)
-  doc.font('Helvetica').fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+  doc.fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
 
   // === INFOS DE PAIEMENT (optionnel) ===
   if (invoice.paymentInfo || invoice.iban) {
