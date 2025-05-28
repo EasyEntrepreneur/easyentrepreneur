@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 
-// Style général (très proche de ce que tu as à l'écran)
+// Styles adaptés à ton design
 const styles = StyleSheet.create({
   page: {
     fontSize: 10,
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   }
 });
 
-// Props Type
+// Types pour les props
 type InvoiceItem = {
   description: string;
   quantity: number;
@@ -106,7 +106,7 @@ type CompanyInfo = {
   siret?: string;
   vat?: string;
 };
-type InvoicePDFProps = {
+export interface InvoicePDFProps {
   invoiceNumber: string;
   issuedAt: string | Date;
   statut: string;
@@ -127,9 +127,9 @@ type InvoicePDFProps = {
   paymentInfo?: string | null;
   iban?: string | null;
   bic?: string | null;
-};
+}
 
-export const InvoicePDF = ({
+const InvoicePDF: React.FC<InvoicePDFProps> = ({
   invoiceNumber,
   issuedAt,
   statut,
@@ -142,7 +142,7 @@ export const InvoicePDF = ({
   paymentInfo,
   iban,
   bic
-}: InvoicePDFProps) => {
+}) => {
   // Calcul TVA(s) par taux
   const tvaMap: Record<string, number> = {};
   items.forEach((item) => {
@@ -170,12 +170,10 @@ export const InvoicePDF = ({
               <Text style={styles.value}>TVA : {issuer.vat}</Text>
             )}
           </View>
-
           {/* Facture numéro */}
           <View style={{ width: "30%" }}>
             <Text style={styles.factureTitle}>Facture N°{invoiceNumber}</Text>
           </View>
-
           {/* Client */}
           <View style={{ width: "25%" }}>
             <Text style={styles.sectionTitle}>Client :</Text>

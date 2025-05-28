@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 
+// Types pour chaque prop attendue (aligné sur InvoicePDF)
 type QuoteItem = {
   description: string;
   quantity: number;
@@ -29,24 +30,25 @@ type CompanyInfo = {
 };
 
 type QuotePDFProps = {
-  quote: {
-    number: string;
-    issuedAt: string | Date;
-    validUntil?: string | Date | null;
-    statut: string;
-    clientName: string;
-    clientAddress: string;
-    clientZip: string;
-    clientCity: string;
-    clientEmail?: string;
-    clientPhone?: string;
-    items: QuoteItem[];
-    totalHT: number;
-    totalTVA: number;
-    totalTTC: number;
-    notes?: string | null;
-    user?: { companyInfo?: CompanyInfo | null } | null;
+  number: string;
+  issuedAt: string | Date;
+  validUntil?: string | Date | null;
+  statut: string;
+  client: {
+    name: string;
+    address: string;
+    zip: string;
+    city: string;
+    email?: string;
+    phone?: string;
+    vat?: string;
   };
+  items: QuoteItem[];
+  totalHT: number;
+  totalTVA: number;
+  totalTTC: number;
+  notes?: string | null;
+  user?: { companyInfo?: CompanyInfo | null } | null;
 };
 
 const styles = StyleSheet.create({
@@ -123,16 +125,24 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center"
   },
-  paymentInfo: {
-    marginTop: 10,
-    fontSize: 10
-  }
 });
 
-export const QuotePDF: React.FC<QuotePDFProps> = ({ quote }) => {
+export const QuotePDF: React.FC<QuotePDFProps> = ({
+  number,
+  issuedAt,
+  validUntil,
+  statut,
+  client,
+  items,
+  totalHT,
+  totalTVA,
+  totalTTC,
+  notes,
+  user
+}) => {
   // Calcul TVA par taux
   const tvaMap: Record<string, number> = {};
-  quote.items.forEach((item) => {
+  items.forEach((item) => {
     const taux = (item.vatRate || 0).toFixed(2);
     tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA;
   });
@@ -144,42 +154,47 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote }) => {
         <View style={styles.header}>
           <View style={styles.column}>
             <Text style={styles.sectionTitle}>Émetteur :</Text>
-            <Text style={styles.value}>{quote.user?.companyInfo?.name || "Votre société"}</Text>
-            <Text style={styles.value}>{quote.user?.companyInfo?.address || ""}</Text>
+            <Text style={styles.value}>{user?.companyInfo?.name || "Votre société"}</Text>
+            <Text style={styles.value}>{user?.companyInfo?.address || ""}</Text>
             <Text style={styles.value}>
-              {[quote.user?.companyInfo?.zip, quote.user?.companyInfo?.city].filter(Boolean).join(" ")}
+              {[user?.companyInfo?.zip, user?.companyInfo?.city].filter(Boolean).join(" ")}
             </Text>
-            {quote.user?.companyInfo?.siret && (
-              <Text style={styles.value}>SIRET : {quote.user.companyInfo.siret}</Text>
+            {user?.companyInfo?.siret && (
+              <Text style={styles.value}>SIRET : {user.companyInfo.siret}</Text>
             )}
-            {quote.user?.companyInfo?.vat && (
-              <Text style={styles.value}>TVA : {quote.user.companyInfo.vat}</Text>
+            {user?.companyInfo?.vat && (
+              <Text style={styles.value}>TVA : {user.companyInfo.vat}</Text>
             )}
           </View>
           <View>
-            <Text style={styles.quoteTitle}>Devis N°{quote.number}</Text>
+            <Text style={styles.quoteTitle}>Devis N°{number}</Text>
             <Text style={styles.value}>
-              Émis le : {new Date(quote.issuedAt).toLocaleDateString("fr-FR")}
+              Émis le : {typeof issuedAt === "string"
+                ? new Date(issuedAt).toLocaleDateString("fr-FR")
+                : issuedAt.toLocaleDateString("fr-FR")}
             </Text>
-            {quote.validUntil && (
+            {validUntil && (
               <Text style={styles.value}>
-                Valable jusqu'au : {new Date(quote.validUntil).toLocaleDateString("fr-FR")}
+                Valable jusqu'au : {typeof validUntil === "string"
+                  ? new Date(validUntil).toLocaleDateString("fr-FR")
+                  : validUntil.toLocaleDateString("fr-FR")}
               </Text>
             )}
-            <Text style={styles.value}>Statut : {quote.statut}</Text>
+            <Text style={styles.value}>Statut : {statut}</Text>
           </View>
         </View>
 
         {/* CLIENT */}
         <View style={[styles.column, { marginTop: 18, marginBottom: 8 }]}>
           <Text style={styles.sectionTitle}>Client :</Text>
-          <Text style={styles.value}>{quote.clientName}</Text>
-          <Text style={styles.value}>{quote.clientAddress}</Text>
+          <Text style={styles.value}>{client.name}</Text>
+          <Text style={styles.value}>{client.address}</Text>
           <Text style={styles.value}>
-            {[quote.clientZip, quote.clientCity].filter(Boolean).join(" ")}
+            {[client.zip, client.city].filter(Boolean).join(" ")}
           </Text>
-          {quote.clientEmail && <Text style={styles.value}>Email : {quote.clientEmail}</Text>}
-          {quote.clientPhone && <Text style={styles.value}>Tél : {quote.clientPhone}</Text>}
+          {client.email && <Text style={styles.value}>Email : {client.email}</Text>}
+          {client.phone && <Text style={styles.value}>Tél : {client.phone}</Text>}
+          {client.vat && <Text style={styles.value}>TVA : {client.vat}</Text>}
         </View>
 
         {/* TABLEAU LIGNES */}
@@ -192,7 +207,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote }) => {
             <Text style={[styles.tableCell, styles.tableCellPrice]}>Total HT</Text>
             <Text style={[styles.tableCell, styles.tableCellPrice]}>Total TTC</Text>
           </View>
-          {quote.items.map((item, idx) => (
+          {items.map((item, idx) => (
             <View key={idx} style={styles.tableRow}>
               <Text style={[styles.tableCell, { flexGrow: 2 }]}>{item.description}</Text>
               <Text style={[styles.tableCell, styles.tableCellQty]}>{item.quantity}</Text>
@@ -209,7 +224,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote }) => {
         {/* TOTAUX */}
         <View style={styles.totalsRow}>
           <Text style={styles.totalsCell}>Total HT :</Text>
-          <Text style={styles.totalsCell}>{quote.totalHT.toFixed(2)} €</Text>
+          <Text style={styles.totalsCell}>{totalHT.toFixed(2)} €</Text>
         </View>
         {/* Affichage TVA(s) par taux */}
         {Object.entries(tvaMap).map(([taux, montant]) => (
@@ -220,16 +235,16 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote }) => {
         ))}
         <View style={styles.totalsRow}>
           <Text style={styles.totalsCell}>Total TVA :</Text>
-          <Text style={styles.totalsCell}>{quote.totalTVA.toFixed(2)} €</Text>
+          <Text style={styles.totalsCell}>{totalTVA.toFixed(2)} €</Text>
         </View>
         <View style={styles.totalsRow}>
           <Text style={styles.totalsCell}>Total TTC :</Text>
-          <Text style={styles.totalsCell}>{quote.totalTTC.toFixed(2)} €</Text>
+          <Text style={styles.totalsCell}>{totalTTC.toFixed(2)} €</Text>
         </View>
 
         {/* NOTES */}
-        {quote.notes && (
-          <Text style={styles.note}>Conditions / Notes : {quote.notes}</Text>
+        {notes && (
+          <Text style={styles.note}>Conditions / Notes : {notes}</Text>
         )}
 
         {/* TVA non applicable */}
