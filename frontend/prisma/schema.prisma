@@ -140,8 +140,6 @@ model Invoice {
 
   invoiceTitle  String?
   paymentInfo   String? // <-- infos de paiement (IBAN, instructions, etc)
-  iban String?
-  bic  String?
   invoiceHtml     String?
 
   pdfUrl String? // Chemin du PDF stocké (optionnel)
