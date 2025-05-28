@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 export async function GET(req: NextRequest, context: any) {
   const { id } = context.params
 
-  const quote = await prisma.quote.findUnique({
+  const invoice = await prisma.invoice.findUnique({
     where: { id },
     include: {
       items: true,
@@ -13,9 +13,9 @@ export async function GET(req: NextRequest, context: any) {
     }
   })
 
-  if (!quote) {
-    return NextResponse.json({ error: "Devis introuvable" }, { status: 404 })
+  if (!invoice) {
+    return NextResponse.json({ error: "Facture introuvable" }, { status: 404 })
   }
 
-  return NextResponse.json(quote)
+  return NextResponse.json(invoice)
 }
