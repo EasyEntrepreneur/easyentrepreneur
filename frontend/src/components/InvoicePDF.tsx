@@ -7,11 +7,13 @@ import {
   StyleSheet
 } from "@react-pdf/renderer";
 
-// UTILITAIRE POUR LA DEVISE
+// UTILITAIRE DEVISE SANS SLASH, AVEC SÉPARATEUR D'ESPACE
 const euro = (v: number) =>
-  v?.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
+  v != null
+    ? v.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\u202f/g, ' ') + " €"
+    : "";
 
-// STYLE INSPIRÉ DU DEUXIÈME SCREENSHOT
+// STYLE VISUEL PRO + PROPRE
 const styles = StyleSheet.create({
   page: {
     fontSize: 11,
@@ -21,36 +23,51 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    alignItems: "flex-start"
   },
   emitterBlock: {
-    width: "40%",
-    fontWeight: "bold"
+    width: "35%",
+    fontWeight: "bold",
+    marginTop: 12
+  },
+  invoiceTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    textAlign: "right",
+    marginBottom: 2,
+    marginRight: 0
   },
   clientBlock: {
-    width: "40%",
+    width: "35%",
     textAlign: "right",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    marginTop: 12
   },
   siret: {
     marginTop: 2,
     fontWeight: "normal"
   },
-  invoiceTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    marginTop: 16,
-    marginBottom: 10,
-    textAlign: "right"
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+    marginTop: 18
   },
-  dateBlock: {
+  dateLabel: {
     backgroundColor: "#E5EAFE",
     color: "#202060",
     padding: 6,
     borderRadius: 5,
-    marginBottom: 16,
-    width: 150,
-    fontWeight: "bold"
+    width: 130,
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: 11,
+    marginRight: 10
+  },
+  dateValue: {
+    fontWeight: "bold",
+    fontSize: 11
   },
   table: {
     width: "100%",
@@ -62,7 +79,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#dbeafe",
-    minHeight: 28
+    minHeight: 26
   },
   tableHeader: {
     backgroundColor: "#e5eafe",
@@ -195,32 +212,17 @@ export const InvoicePDF = ({
   iban,
   bic
 }: InvoicePDFProps) => {
-  // Map des TVA(s)
-  const tvaMap: Record<string, number> = {};
-  items.forEach(item => {
-    const taux = (item.vatRate || 0).toFixed(2);
-    tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA;
-  });
-  console.log({
-  invoiceNumber,
-  issuedAt,
-  statut,
-  issuer,
-  client,
-  items,
-  totalHT,
-  totalTVA,
-  totalTTC,
-  paymentInfo,
-  iban,
-  bic
-});
+  // --- SIRET client, format nombre, suppression "/" dans les prix
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* HEADER */}
+        {/* Titre tout en haut à droite */}
+        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+          <Text style={styles.invoiceTitle}>Facture N°{invoiceNumber}</Text>
+        </View>
+        {/* HEADER - Issuer / Client */}
         <View style={styles.headerRow}>
-          {/* Émetteur */}
+          {/* Émetteur à gauche */}
           <View style={styles.emitterBlock}>
             <Text>{issuer.name}</Text>
             <Text>{issuer.address}</Text>
@@ -228,49 +230,44 @@ export const InvoicePDF = ({
               {[issuer.zip, issuer.city].filter(Boolean).join(" ")}
             </Text>
             {issuer.siret && (
-              <Text style={styles.siret}>Siret : {issuer.siret}</Text>
+              <Text style={styles.siret}>SIRET : {issuer.siret}</Text>
             )}
             {issuer.vat && (
               <Text style={styles.siret}>TVA : {issuer.vat}</Text>
             )}
           </View>
-          {/* Titre + Client */}
+          {/* Client à droite */}
           <View style={styles.clientBlock}>
-            <Text style={styles.invoiceTitle}>
-              Facture N°{invoiceNumber}
-            </Text>
             <Text>{client.name}</Text>
             <Text>{client.address}</Text>
             <Text>
               {[client.zip, client.city].filter(Boolean).join(" ")}
             </Text>
             {client.siret && (
-              <Text style={styles.siret}>Siret : {client.siret}</Text>
+              <Text style={styles.siret}>SIRET : {client.siret}</Text>
             )}
             {client.vat && (
               <Text style={styles.siret}>TVA : {client.vat}</Text>
             )}
           </View>
         </View>
-
-        {/* Date de facture */}
-        <View style={styles.dateBlock}>
-          <Text>
-            Date de facture :{" "}
+        {/* Date alignée sur la même ligne que le label */}
+        <View style={styles.dateRow}>
+          <Text style={styles.dateLabel}>Date de facture</Text>
+          <Text style={styles.dateValue}>
             {typeof issuedAt === "string"
               ? new Date(issuedAt).toLocaleDateString("fr-FR")
               : issuedAt.toLocaleDateString("fr-FR")}
           </Text>
         </View>
-
-        {/* TABLE */}
+        {/* Tableau */}
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
             <Text style={styles.cellDesc}>Description</Text>
             <Text style={styles.cellQty}>Quantité</Text>
             <Text style={styles.cellPrice}>Prix unitaire HT</Text>
-            <Text style={styles.cellTva}>TVA</Text>
             <Text style={styles.cellTotalHT}>Prix total HT</Text>
+            <Text style={styles.cellTva}>TVA (%)</Text>
             <Text style={styles.cellTotalTTC}>Prix total TTC</Text>
           </View>
           {items.map((item, i) => (
@@ -278,27 +275,18 @@ export const InvoicePDF = ({
               <Text style={styles.cellDesc}>{item.description}</Text>
               <Text style={styles.cellQty}>{item.quantity}</Text>
               <Text style={styles.cellPrice}>{euro(item.unitPrice)}</Text>
-              <Text style={styles.cellTva}>{(item.vatRate || 0).toFixed(2)} %</Text>
               <Text style={styles.cellTotalHT}>{euro(item.totalHT)}</Text>
+              <Text style={styles.cellTva}>{(item.vatRate || 0).toFixed(2)}</Text>
               <Text style={styles.cellTotalTTC}>{euro(item.totalTTC)}</Text>
             </View>
           ))}
         </View>
-
-        {/* TOTALS EN BAS A DROITE */}
+        {/* Totaux (PLUS DE DÉTAILS TVA PAR LIGNE) */}
         <View style={styles.totalsBox}>
           <View style={styles.totalsRow}>
             <Text>Total HT</Text>
             <Text>{euro(totalHT)}</Text>
           </View>
-          {Object.entries(tvaMap).map(([taux, montant]) => (
-            <View style={styles.totalsRowNormal} key={taux}>
-              <Text>
-                TVA {taux} % :
-              </Text>
-              <Text>{euro(montant)}</Text>
-            </View>
-          ))}
           <View style={styles.totalsRowNormal}>
             <Text>Total TVA :</Text>
             <Text>{euro(totalTVA)}</Text>
@@ -308,17 +296,14 @@ export const InvoicePDF = ({
             <Text>{euro(totalTTC)}</Text>
           </View>
         </View>
-
-        {/* Infos paiement */}
+        {/* Paiement */}
         {(paymentInfo || iban || bic) && (
           <View style={styles.paiementBlock}>
-            <Text>Informations de paiement :</Text>
             {paymentInfo && <Text>{paymentInfo}</Text>}
             {iban && <Text>IBAN : {iban}</Text>}
             {bic && <Text>BIC : {bic}</Text>}
           </View>
         )}
-
         <Text style={styles.note}>
           TVA non applicable, art. 293B du CGI.
         </Text>
