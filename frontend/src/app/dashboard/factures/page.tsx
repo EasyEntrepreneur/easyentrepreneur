@@ -35,33 +35,15 @@ const STATUTS: { value: InvoiceStatus, label: string }[] = [
 ]
 
 // Télécharge et affiche le PDF dans un nouvel onglet avec toast
-const handleShowOrDownloadPdf = async (id: string, number: string, type: 'facture' | 'devis' = 'facture') => {
-  const token = localStorage.getItem("token")
-  if (!token) {
-    toast.error("Veuillez vous reconnecter")
-    return
+const handleShowOrDownloadPdf = (id: string, number: string, type: 'facture' | 'devis' = 'facture') => {
+  let url = ''
+  if (type === 'facture') {
+    url = `/dashboard/factures/${id}/pdf`
+  } else {
+    url = `/dashboard/devis/${id}/pdf`
   }
-  try {
-    const endpoint = type === 'devis'
-      ? `${process.env.NEXT_PUBLIC_API_URL}/quotes/${id}/pdf`
-      : `${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}/pdf`
-    const res = await fetch(endpoint, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (!res.ok) throw new Error("Impossible de récupérer le PDF")
-    const blob = await res.blob()
-    const pdfUrl = window.URL.createObjectURL(blob)
-    // Ouvre le PDF dans un nouvel onglet
-    window.open(pdfUrl, '_blank')
-    toast.success("PDF généré et affiché !")
-    // Pour le download auto (décommente au besoin) :
-    // const link = document.createElement('a')
-    // link.href = pdfUrl
-    // link.download = `${type === 'devis' ? 'Devis' : 'Facture'}-${number}.pdf`
-    // link.click()
-  } catch (e) {
-    toast.error("Erreur lors de la récupération du PDF")
-  }
+  window.open(url, '_blank')
+  toast.success("Aperçu PDF ouvert dans un nouvel onglet !")
 }
 
 function showConfirmToast(message: string, onConfirm: () => void) {
