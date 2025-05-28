@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   // Totaux
   totalsBox: {
     alignSelf: "flex-end",
-    width: "35%",
+    width: "50%",
     backgroundColor: "#e5eafe",
     borderRadius: 5,
     marginTop: 18,
@@ -298,7 +298,7 @@ export const InvoicePDF = ({
         </View>
         {/* PAIEMENT + TOTALS côte à côte */}
         <View style={{ flexDirection: "row", width: "100%", marginTop: 22 }}>
-          <View style={{ width: "65%" }}>
+          <View style={{ width: "50%" }}>
             {paymentInfo && (
               <View style={styles.paiementBlock}>
                 <Text>{paymentInfo}</Text>
