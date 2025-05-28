@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
     items,
     invoiceHtml,
     invoiceTitle,
-    paymentInfo, // <-- utilisé pour la génération PDF côté client
+    paymentInfo,
+    legalNote, // <-- utilisé pour la génération PDF côté client
     ...rest
   } = body
 
@@ -148,6 +149,7 @@ export async function POST(req: NextRequest) {
       invoiceHtml,
       invoiceTitle,
       paymentInfo,
+      legalNote,
     },
     include: { items: true, client: true },
   })
