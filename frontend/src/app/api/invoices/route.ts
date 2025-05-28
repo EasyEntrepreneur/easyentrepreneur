@@ -30,8 +30,6 @@ export async function POST(req: NextRequest) {
   const {
     client,
     dueAt,
-    iban,
-    bic,
     items,
     invoiceHtml,
     invoiceTitle,
@@ -143,8 +141,6 @@ export async function POST(req: NextRequest) {
       clientEmail: client.email,
       clientPhone: client.phone,
       dueAt: dueAt ? new Date(dueAt) : undefined,
-      iban,
-      bic,
       totalHT,
       totalTVA,
       totalTTC,
