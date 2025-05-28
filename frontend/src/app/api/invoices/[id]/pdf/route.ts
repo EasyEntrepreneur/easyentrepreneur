@@ -4,9 +4,9 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const invoiceId = params.id;
+  const { id: invoiceId } = context.params;
   if (!invoiceId) {
     return new Response("ID manquant", { status: 400 });
   }
@@ -21,7 +21,7 @@ export async function GET(
     return new Response("Facture introuvable", { status: 404 });
   }
 
-  // Générer le HTML pour la facture (ici très simple à adapter à ton template !)
+  // Générer le HTML pour la facture (à personnaliser avec ton vrai template !)
   const html = `
     <html>
       <head>
@@ -44,7 +44,6 @@ export async function GET(
     </html>
   `;
 
-  // Générer le PDF avec Puppeteer
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
