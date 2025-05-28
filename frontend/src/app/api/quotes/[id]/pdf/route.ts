@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import PDFDocument from 'pdfkit'
 import prisma from '@/lib/prisma'
 
-// Types pour la boucle (pas obligatoire mais conseillé)
 type QuoteItem = {
   description: string
   quantity: number
@@ -15,9 +14,9 @@ type QuoteItem = {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: any // ou simplement context (pas typé)
 ) {
-  const { id } = params
+  const { id } = context.params
 
   // Récupération du devis + lignes + client + user et companyInfo
   const quote = await prisma.quote.findUnique({
