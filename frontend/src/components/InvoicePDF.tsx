@@ -4,91 +4,117 @@ import {
   Page,
   Text,
   View,
-  StyleSheet,
+  StyleSheet
 } from "@react-pdf/renderer";
 
-// Styles adaptés à ton design
+// --- STYLES (adapte pour coller à ta maquette) ---
+const PRIMARY = "#e6ecfc";
+const HEADER_FONT = "#151c2b";
+const HEADER_BG = "#eef2fc";
+const CELL_BG = "#f3f6fc";
+
 const styles = StyleSheet.create({
   page: {
-    fontSize: 10,
+    fontSize: 10.5,
     padding: 30,
     fontFamily: "Helvetica",
     backgroundColor: "#fff"
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start"
-  },
-  column: {
-    flexDirection: "column"
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: "bold",
-    marginBottom: 2
-  },
-  value: {
-    marginBottom: 2
-  },
+  row: { flexDirection: "row" },
+  between: { justifyContent: "space-between" },
+
+  // Entêtes
+  emetteurBlock: { width: "35%", fontWeight: "bold", color: HEADER_FONT },
+  clientBlock: { width: "35%", marginLeft: "auto", textAlign: "right", fontWeight: "bold", color: HEADER_FONT },
+  factureTitleBlock: { width: "30%", textAlign: "right" },
+
   factureTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
     textAlign: "right",
-    marginBottom: 6
+    marginBottom: 6,
+    color: HEADER_FONT
   },
+  label: { fontWeight: "bold", fontSize: 11 },
+  value: { marginBottom: 2 },
+
+  // Date de facture
+  dateBar: {
+    backgroundColor: PRIMARY,
+    color: "#222",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 3,
+    marginTop: 12,
+    marginBottom: 12,
+    alignSelf: "flex-start",
+    fontWeight: "bold"
+  },
+
+  // Tableau
   table: {
-    width: "auto",
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0"
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    marginTop: 8
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: CELL_BG,
+    fontWeight: "bold",
+    borderTop: `1px solid #e0e0e0`,
+    borderBottom: `1px solid #e0e0e0`
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderColor: "#e0e0e0",
+    borderBottom: `1px solid #e0e0e0`,
     minHeight: 20,
     alignItems: "center"
   },
-  tableHeader: {
-    backgroundColor: "#F3F6FC",
-    fontWeight: "bold"
-  },
   tableCell: {
-    padding: 4,
-    flexGrow: 1,
+    padding: 5,
+    fontSize: 10,
+    borderRight: `1px solid #f0f0f0`
+  },
+  cellDesc: { width: "38%" },
+  cellQty: { width: "10%", textAlign: "center" },
+  cellPU: { width: "16%", textAlign: "right" },
+  cellTVA: { width: "12%", textAlign: "right" },
+  cellHT: { width: "12%", textAlign: "right" },
+  cellTTC: { width: "12%", textAlign: "right", borderRight: 0 },
+
+  // Totaux
+  totalRow: { flexDirection: "row", justifyContent: "flex-end" },
+  totalBar: {
+    backgroundColor: PRIMARY,
+    color: "#151c2b",
+    fontWeight: "bold",
+    fontSize: 12,
+    padding: 8,
+    width: 170,
+    textAlign: "right",
+    borderRadius: 4,
+    marginTop: 14
+  },
+  totalsCell: { width: 170, textAlign: "right", fontWeight: "bold", fontSize: 11 },
+
+  // Paiement
+  paymentInfo: {
+    marginTop: 18,
+    fontSize: 10.5,
     textAlign: "left"
   },
-  tableCellQty: {
-    flexGrow: 0.4,
-    textAlign: "center"
-  },
-  tableCellPrice: {
-    flexGrow: 0.7,
-    textAlign: "right"
-  },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 8
-  },
-  totalsCell: {
-    width: 120,
-    textAlign: "right"
-  },
+
+  // Mentions légales TVA
   note: {
-    marginTop: 12,
-    fontSize: 9,
+    marginTop: 18,
+    fontSize: 10,
     color: "#666",
     textAlign: "center"
-  },
-  paymentInfo: {
-    marginTop: 10,
-    fontSize: 10
   }
 });
 
-// Types pour les props
+// --- PROPS TYPE ---
 type InvoiceItem = {
   description: string;
   quantity: number;
@@ -106,7 +132,7 @@ type CompanyInfo = {
   siret?: string;
   vat?: string;
 };
-export interface InvoicePDFProps {
+type InvoicePDFProps = {
   invoiceNumber: string;
   issuedAt: string | Date;
   statut: string;
@@ -119,6 +145,7 @@ export interface InvoicePDFProps {
     phone?: string;
     email?: string;
     vat?: string;
+    siret?: string;
   };
   items: InvoiceItem[];
   totalHT: number;
@@ -127,9 +154,9 @@ export interface InvoicePDFProps {
   paymentInfo?: string | null;
   iban?: string | null;
   bic?: string | null;
-}
+};
 
-const InvoicePDF: React.FC<InvoicePDFProps> = ({
+export const InvoicePDF = ({
   invoiceNumber,
   issuedAt,
   statut,
@@ -142,10 +169,10 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({
   paymentInfo,
   iban,
   bic
-}) => {
-  // Calcul TVA(s) par taux
+}: InvoicePDFProps) => {
+  // TVA(s) par taux
   const tvaMap: Record<string, number> = {};
-  items.forEach((item) => {
+  items.forEach(item => {
     const taux = (item.vatRate || 0).toFixed(2);
     tvaMap[taux] = (tvaMap[taux] || 0) + item.totalTVA;
   });
@@ -153,131 +180,100 @@ const InvoicePDF: React.FC<InvoicePDFProps> = ({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* HEADER */}
-        <View style={styles.header}>
-          {/* Émetteur */}
-          <View style={{ width: "45%" }}>
-            <Text style={styles.sectionTitle}>Émetteur :</Text>
-            <Text style={styles.value}>{issuer.name || "Votre société"}</Text>
-            <Text style={styles.value}>{issuer.address || ""}</Text>
-            <Text style={styles.value}>
+        {/* En-tête émetteur/client */}
+        <View style={[styles.row, styles.between]}>
+          {/* Émetteur à gauche */}
+          <View style={styles.emetteurBlock}>
+            <Text style={styles.label}>{issuer.name || "Votre société"}</Text>
+            <Text>{issuer.address || ""}</Text>
+            <Text>
               {[issuer.zip, issuer.city].filter(Boolean).join(" ")}
             </Text>
-            {issuer.siret && (
-              <Text style={styles.value}>SIRET : {issuer.siret}</Text>
-            )}
-            {issuer.vat && (
-              <Text style={styles.value}>TVA : {issuer.vat}</Text>
-            )}
+            {issuer.siret && <Text>Siret : {issuer.siret}</Text>}
+            {issuer.vat && <Text>TVA : {issuer.vat}</Text>}
           </View>
-          {/* Facture numéro */}
-          <View style={{ width: "30%" }}>
+          {/* Titre facture et bloc client */}
+          <View style={{ alignItems: "flex-end", flex: 1 }}>
             <Text style={styles.factureTitle}>Facture N°{invoiceNumber}</Text>
-          </View>
-          {/* Client */}
-          <View style={{ width: "25%" }}>
-            <Text style={styles.sectionTitle}>Client :</Text>
-            <Text style={styles.value}>{client.name}</Text>
-            <Text style={styles.value}>{client.address}</Text>
-            <Text style={styles.value}>
-              {[client.zip, client.city].filter(Boolean).join(" ")}
-            </Text>
-            {client.vat && <Text style={styles.value}>TVA : {client.vat}</Text>}
-            {client.email && (
-              <Text style={styles.value}>Email : {client.email}</Text>
-            )}
-            {client.phone && (
-              <Text style={styles.value}>Tél : {client.phone}</Text>
-            )}
+            <View style={styles.clientBlock}>
+              <Text style={styles.label}>{client.name}</Text>
+              <Text>{client.address}</Text>
+              <Text>
+                {[client.zip, client.city].filter(Boolean).join(" ")}
+              </Text>
+              {client.siret && <Text>Siret : {client.siret}</Text>}
+              {client.vat && <Text>TVA : {client.vat}</Text>}
+            </View>
           </View>
         </View>
 
-        {/* Infos Date + Statut */}
-        <View style={{ flexDirection: "row", marginTop: 12, marginBottom: 6 }}>
-          <Text style={{ flexGrow: 1 }}>
-            Émise le :{" "}
-            {typeof issuedAt === "string"
-              ? new Date(issuedAt).toLocaleDateString("fr-FR")
-              : issuedAt.toLocaleDateString("fr-FR")}
-          </Text>
-          <Text>Statut : {statut}</Text>
-        </View>
+        {/* Date dans barre bleue */}
+        <Text style={styles.dateBar}>
+          Date de facture : {typeof issuedAt === "string"
+            ? new Date(issuedAt).toLocaleDateString("fr-FR")
+            : issuedAt.toLocaleDateString("fr-FR")}
+        </Text>
 
-        {/* TABLEAU */}
+        {/* Tableau des lignes */}
         <View style={styles.table}>
-          {/* Table Header */}
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={styles.tableCell}>Désignation</Text>
-            <Text style={[styles.tableCell, styles.tableCellQty]}>Qté</Text>
-            <Text style={[styles.tableCell, styles.tableCellPrice]}>
-              PU HT
-            </Text>
-            <Text style={[styles.tableCell, styles.tableCellPrice]}>
-              TVA
-            </Text>
-            <Text style={[styles.tableCell, styles.tableCellPrice]}>
-              Total HT
-            </Text>
-            <Text style={[styles.tableCell, styles.tableCellPrice]}>
-              Total TTC
-            </Text>
+          {/* Header */}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableCell, styles.cellDesc]}>Description</Text>
+            <Text style={[styles.tableCell, styles.cellQty]}>Quantité</Text>
+            <Text style={[styles.tableCell, styles.cellPU]}>Prix unitaire HT</Text>
+            <Text style={[styles.tableCell, styles.cellTVA]}>TVA</Text>
+            <Text style={[styles.tableCell, styles.cellHT]}>Prix total HT</Text>
+            <Text style={[styles.tableCell, styles.cellTTC]}>Prix total TTC</Text>
           </View>
-          {/* Table Rows */}
-          {items.map((item, i) => (
-            <View style={styles.tableRow} key={i}>
-              <Text style={styles.tableCell}>{item.description}</Text>
-              <Text style={[styles.tableCell, styles.tableCellQty]}>
-                {item.quantity}
-              </Text>
-              <Text style={[styles.tableCell, styles.tableCellPrice]}>
-                {item.unitPrice.toFixed(2)}
-              </Text>
-              <Text style={[styles.tableCell, styles.tableCellPrice]}>
-                {(item.vatRate || 0).toFixed(2)} %
-              </Text>
-              <Text style={[styles.tableCell, styles.tableCellPrice]}>
-                {item.totalHT.toFixed(2)}
-              </Text>
-              <Text style={[styles.tableCell, styles.tableCellPrice]}>
-                {item.totalTTC.toFixed(2)}
-              </Text>
+          {/* Rows */}
+          {items.map((item, idx) => (
+            <View key={idx} style={styles.tableRow}>
+              <Text style={[styles.tableCell, styles.cellDesc]}>{item.description}</Text>
+              <Text style={[styles.tableCell, styles.cellQty]}>{item.quantity}</Text>
+              <Text style={[styles.tableCell, styles.cellPU]}>{item.unitPrice.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
+              <Text style={[styles.tableCell, styles.cellTVA]}>{(item.vatRate || 0).toFixed(2)} %</Text>
+              <Text style={[styles.tableCell, styles.cellHT]}>{item.totalHT.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
+              <Text style={[styles.tableCell, styles.cellTTC]}>{item.totalTTC.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
             </View>
           ))}
         </View>
 
-        {/* TOTALS */}
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsCell}>
-            Total HT : {totalHT.toFixed(2)} €
-          </Text>
-        </View>
-        {Object.entries(tvaMap).map(([taux, montant]) => (
-          <View style={styles.totalsRow} key={taux}>
-            <Text style={styles.totalsCell}>
-              TVA {taux} % : {montant.toFixed(2)} €
-            </Text>
-          </View>
-        ))}
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsCell}>
-            Total TVA : {totalTVA.toFixed(2)} €
-          </Text>
-        </View>
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsCell}>
-            Total TTC : {totalTTC.toFixed(2)} €
-          </Text>
+        {/* Bloc total à droite dans bandeau bleu */}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalBar}>Total HT&nbsp;&nbsp;{totalHT.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
         </View>
 
-        {/* Paiement / note */}
-        {(paymentInfo || iban || bic) && (
-          <View style={styles.paymentInfo}>
-            <Text>Informations de paiement :</Text>
-            {paymentInfo && <Text>{paymentInfo}</Text>}
-            {iban && <Text>IBAN : {iban}</Text>}
-            {bic && <Text>BIC : {bic}</Text>}
+        {/* TVA(s) par taux */}
+        {Object.entries(tvaMap).map(([taux, montant]) => (
+          <View style={styles.totalRow} key={taux}>
+            <Text style={styles.totalsCell}>TVA {taux} % : {montant.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
           </View>
-        )}
+        ))}
+
+        {/* Total TVA et TTC */}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalsCell}>Total TVA : {totalTVA.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
+        </View>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalsCell}>Total TTC : {totalTTC.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</Text>
+        </View>
+
+        {/* Infos paiement et mention TVA */}
+        <View style={{ flexDirection: "row", marginTop: 28 }}>
+          <View style={{ flex: 1 }}>
+            {(paymentInfo || iban || bic) && (
+              <View style={styles.paymentInfo}>
+                <Text>Informations de paiement :</Text>
+                {paymentInfo && <Text>{paymentInfo}</Text>}
+                {iban && <Text>IBAN : {iban}</Text>}
+                {bic && <Text>BIC : {bic}</Text>}
+              </View>
+            )}
+          </View>
+          <View style={{ flex: 1, alignItems: "flex-end" }}>
+            {/* Vide ou autres infos à ajouter */}
+          </View>
+        </View>
         <Text style={styles.note}>
           TVA non applicable, art. 293B du CGI.
         </Text>
