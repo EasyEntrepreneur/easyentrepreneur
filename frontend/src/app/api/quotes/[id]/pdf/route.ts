@@ -6,16 +6,14 @@ import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const quoteId = params.id;
-  if (!quoteId) {
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/");
+  const quoteId = parts[parts.length - 2];
+  if (!quoteId || quoteId === "pdf") {
     return new Response("ID manquant", { status: 400 });
   }
 
-  // Cherche le devis
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
     include: { items: true, client: true },
@@ -24,13 +22,10 @@ export async function GET(
     return new Response("Devis introuvable", { status: 404 });
   }
 
-  // Vérifie si le PDF existe déjà (champ `pdfUrl`)
   if (quote.pdfUrl) {
-    // Redirection directe
     return Response.redirect(quote.pdfUrl, 302);
   }
 
-  // Génère le HTML (personnalise ici aussi)
   const html = `
     <html>
       <head>
@@ -53,7 +48,6 @@ export async function GET(
     </html>
   `;
 
-  // Génère le PDF
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
@@ -62,10 +56,9 @@ export async function GET(
   const pdfBuffer = await page.pdf({ format: "A4" });
   await browser.close();
 
-  // Upload du PDF sur Supabase Storage
   const filename = `devis/${quote.number}-${uuidv4()}.pdf`;
-  const { data, error } = await supabase.storage
-    .from("quotes")
+  const { error } = await supabase.storage
+    .from("pdfs")
     .upload(filename, pdfBuffer, {
       contentType: "application/pdf",
       upsert: true,
@@ -75,15 +68,12 @@ export async function GET(
     return new Response("Erreur upload Supabase: " + error.message, { status: 500 });
   }
 
-  // Génère l’URL publique
-  const pdfUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/quotes/${filename}`;
+  const pdfUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/pdfs/${filename}`;
 
-  // Mets à jour le devis avec l’URL du PDF
   await prisma.quote.update({
     where: { id: quoteId },
     data: { pdfUrl },
   });
 
-  // Redirige vers le PDF hébergé
   return Response.redirect(pdfUrl, 302);
 }

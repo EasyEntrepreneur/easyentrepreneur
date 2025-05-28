@@ -6,16 +6,16 @@ import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const invoiceId = params.id;
-  if (!invoiceId) {
+export async function GET(req: NextRequest) {
+  // Correction: récupère l'id de la route "/api/invoices/[id]/pdf"
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/");
+  // parts: ['', 'api', 'invoices', 'xxxx', 'pdf']
+  const invoiceId = parts[parts.length - 2];
+  if (!invoiceId || invoiceId === "pdf") {
     return new Response("ID manquant", { status: 400 });
   }
 
-  // Cherche la facture
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: { items: true, client: true },
@@ -24,13 +24,10 @@ export async function GET(
     return new Response("Facture introuvable", { status: 404 });
   }
 
-  // Vérifie si le PDF existe déjà (champ `pdfUrl` en base)
   if (invoice.pdfUrl) {
-    // On renvoie direct le PDF existant (redirection 302)
     return Response.redirect(invoice.pdfUrl, 302);
   }
 
-  // Génère le HTML (utilise ta logique custom ici)
   const html = `
     <html>
       <head>
@@ -53,7 +50,6 @@ export async function GET(
     </html>
   `;
 
-  // Génère le PDF avec Puppeteer
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
@@ -62,10 +58,9 @@ export async function GET(
   const pdfBuffer = await page.pdf({ format: "A4" });
   await browser.close();
 
-  // Upload du PDF sur Supabase Storage
   const filename = `factures/${invoice.number}-${uuidv4()}.pdf`;
-  const { data, error } = await supabase.storage
-    .from("invoices")
+  const { error } = await supabase.storage
+    .from("pdfs")
     .upload(filename, pdfBuffer, {
       contentType: "application/pdf",
       upsert: true,
@@ -75,15 +70,12 @@ export async function GET(
     return new Response("Erreur upload Supabase: " + error.message, { status: 500 });
   }
 
-  // Génère l’URL publique
-  const pdfUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/invoices/${filename}`;
+  const pdfUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/pdfs/${filename}`;
 
-  // Mets à jour la facture avec l’URL du PDF (en base)
   await prisma.invoice.update({
     where: { id: invoiceId },
     data: { pdfUrl },
   });
 
-  // Redirige vers le PDF hébergé
   return Response.redirect(pdfUrl, 302);
 }
