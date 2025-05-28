@@ -43,7 +43,9 @@ export async function GET(
   }
 
   const doc = new PDFDocument({ margin: 40 })
+  // Hack Vercel: on écrase Helvetica par Roboto pour tout le document
   doc.registerFont('Roboto', fontPath)
+  doc.registerFont('Helvetica', fontPath) // ← hack anti-Helvetica
   doc.font('Roboto')
 
   const chunks: Buffer[] = []
@@ -51,15 +53,15 @@ export async function GET(
   doc.on('end', () => {})
 
   // === HEADER ===
-  doc.fontSize(22).text(`Facture n°${invoice.number}`, { align: 'center' })
+  doc.font('Roboto').fontSize(22).text(`Facture n°${invoice.number}`, { align: 'center' })
   doc.moveDown(0.5)
-  doc.fontSize(12)
+  doc.font('Roboto').fontSize(12)
   doc.text(`Émise le : ${new Date(invoice.issuedAt).toLocaleDateString("fr-FR")}`)
   doc.text(`Statut : ${invoice.statut}`)
   doc.moveDown(0.5)
 
   // === CLIENT & ÉMETTEUR ===
-  doc.fontSize(11)
+  doc.font('Roboto').fontSize(11)
   doc.text('Émetteur :', { underline: true })
   doc.text(invoice.user?.companyInfo?.name || 'Votre société')
   doc.text(invoice.user?.companyInfo?.address || '')
@@ -70,6 +72,7 @@ export async function GET(
   if (invoice.user?.companyInfo?.vat) doc.text(`TVA : ${invoice.user.companyInfo.vat}`)
 
   doc.moveDown(0.7)
+  doc.font('Roboto').fontSize(11)
   doc.text('Client :', { underline: true })
   doc.text(invoice.clientName)
   doc.text(invoice.clientAddress)
@@ -80,7 +83,7 @@ export async function GET(
   doc.moveDown(1)
 
   // === TABLEAU LIGNES ===
-  doc.fontSize(11)
+  doc.font('Roboto').fontSize(11)
   doc.text('Désignation', 40, doc.y, { width: 180, continued: true })
   doc.text('Qté', 230, doc.y, { width: 30, align: 'right', continued: true })
   doc.text('PU HT', 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -92,6 +95,7 @@ export async function GET(
   const tvaMap: Record<string, number> = {}
 
   for (const item of invoice.items as InvoiceItem[]) {
+    doc.font('Roboto')
     doc.text(item.description, 40, doc.y, { width: 180, continued: true })
     doc.text(item.quantity.toString(), 230, doc.y, { width: 30, align: 'right', continued: true })
     doc.text(item.unitPrice.toFixed(2), 265, doc.y, { width: 50, align: 'right', continued: true })
@@ -105,16 +109,19 @@ export async function GET(
 
   doc.moveDown(1)
 
+  doc.font('Roboto')
   doc.text('Total HT', 340, doc.y, { continued: true })
   doc.text(invoice.totalHT.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
 
   Object.entries(tvaMap).forEach(([taux, montant]) => {
+    doc.font('Roboto')
     doc.text(`TVA ${taux} %`, 340, doc.y, { continued: true })
     doc.text(montant.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
     doc.moveDown(0.2)
   })
 
+  doc.font('Roboto')
   doc.text('Total TVA', 340, doc.y, { continued: true })
   doc.text(invoice.totalTVA.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
   doc.moveDown(0.3)
@@ -122,12 +129,12 @@ export async function GET(
   doc.text(invoice.totalTTC.toFixed(2) + ' €', 435, doc.y, { align: 'right' })
 
   doc.moveDown(1.5)
-  doc.fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
+  doc.font('Roboto').fontSize(10).text('TVA non applicable, art. 293B du CGI.', { align: 'center' })
 
   // Infos paiement éventuelles
   if (invoice.paymentInfo || invoice.iban) {
     doc.moveDown(1)
-    doc.fontSize(11).text('Informations de paiement :', { underline: true })
+    doc.font('Roboto').fontSize(11).text('Informations de paiement :', { underline: true })
     if (invoice.paymentInfo) doc.text(invoice.paymentInfo)
     if (invoice.iban) doc.text(`IBAN : ${invoice.iban}`)
     if (invoice.bic) doc.text(`BIC : ${invoice.bic}`)
