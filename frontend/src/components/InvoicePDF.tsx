@@ -14,7 +14,13 @@ const formatEuro = (v: number | string) => {
   }
   const n = Number(v);
   if (isNaN(n)) return typeof v === "string" ? v + " €" : "0,00 €";
-  return n.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
+  return (
+    n
+      .toLocaleString("fr-FR", { minimumFractionDigits: 2 })
+      .replace(/\u202F|\u00A0/g, " ") // Séparateur espace insécable → espace simple
+      .replace(/\//g, " ") // Sécurité si jamais
+    + " €"
+  );
 };
 
 const styles = StyleSheet.create({
